@@ -31,6 +31,7 @@ start_link() ->
 %% ------------------------------------------------------------------
 
 init([json]) ->
+  transit_rolling_cache:start_link(),
   transit_json_marshaler:start_link(),
   ets:new(?TRANSIT_HANDLERS, [set, named_table]),
   {ok, #state{marshaler=transit_json_marshaler}}.

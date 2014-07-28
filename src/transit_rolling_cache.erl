@@ -1,10 +1,81 @@
 -module(transit_rolling_cache).
--compile(export_all).
+-behavior(gen_server).
+-export([encode/1, decode/1]).
+-export([start_link/0]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -include_lib("transit_format.hrl").
 
 -define(CACHE_CODE_DIGITS, 44).
 -define(FIRST_ORD, 48).
 -define(MIN_SIZE_CACHEABLE, 4).
+
+-record(cache, {kv=dict:new(),
+                vk=dict:new()}).
+
+start_link() ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, []).
+
+init([]) ->
+  {ok, #cache{}}.
+
+encode(Name) ->
+  gen_server:call(?MODULE, {encode, Name}).
+
+decode(Name) ->
+  gen_server:call(?MODULE, {decode, Name}).
+
+handle_call({encode, Name}, _From, C=#cache{kv=Kv}) ->
+  case dict:find(Name, Kv) of
+    {ok, Val} ->
+      {Val, C};
+    error ->
+      case is_cacheable(Name) of
+        true ->
+          encache(Name, C);
+        false ->
+          {Name, C}
+      end
+  end;
+
+handle_call({decode, Name}, _From, C=#cache{kv=Kv}) ->
+  case is_cache_key(Name) of
+    true ->
+      case dict:find(Name, Kv) of
+        {ok, Val} ->
+          {reply, Val, C};
+        _ ->
+          case is_cacheable(Name) of
+            true ->
+              {Val, C1} = encache(Name, C),
+              {reply, Val, C1};
+            false ->
+              {reply, Name, C}
+          end
+      end;
+    false ->
+      case is_cacheable(Name) of
+        true ->
+          {Val, C2} = encache(Name, C),
+          {reply, Val, C2};
+        false ->
+          {reply, Name, C}
+      end
+  end;
+handle_call(_Msg, _From, C) ->
+  {reply, C}.
+
+handle_cast(_Msg, C) ->
+  {noreply, C}.
+
+handle_info(_Info, C) ->
+  {ok, C}.
+
+code_change(_OldVsn, C, _Extra) ->
+  {ok, C}.
+
+terminate(_Rsn, _C) ->
+  ok.
+
 
 -spec is_cache_key(string()) -> boolean().
 is_cache_key(Name) when length(Name) > 0 ->
@@ -38,16 +109,27 @@ decode_key(Str) ->
   end.
 
 -spec is_cacheable(string(), boolean()) -> boolean().
-is_cacheable(Str, true) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
+is_cacheable(as_map_key, Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
+  true.
+
+is_cacheable(Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
   case string:substr(Str, 1, 2) of
     "~#" -> true;
     "~:" -> true;
     "~$" -> true;
     _ -> false
-  end;
-is_cacheable(_, _) -> false.
+  end.
 
 -spec ord(char()) -> integer().
 ord(Char) ->
   [Int] = io_lib_format:fwrite("~w", Char),
   Int.
+
+encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
+  case dict:find(Name, Vk) of
+    {ok, Val} ->
+      {Val, C};
+    error ->
+      Key = encode_key(maps:size(Kv)),
+      {Name, C#cache{kv=dict:store(Key, Name, Kv), vk=dict:store(Name, Key, Vk)}}
+  end.

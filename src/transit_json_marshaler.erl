@@ -50,12 +50,12 @@ handle_call({emit_object, Object, _AsMapKey}, _From, State) ->
 handle_call({marshal_top, Object}, _From, State=#state{}) ->
   Handler = transit_write_handlers:handler(Object),
   Tag = apply(Handler#write_handler.tag, [Object]),
-  Ret = if length(Tag) =:= 1 ->
-             marshal({?QUOTE, Object}, State);
-           true ->
-             marshal(Object, State)
-        end,
-  {reply, Ret, State};
+  {Ret, NewState} = if length(Tag) =:= 1 ->
+                         marshal({?QUOTE, Object}, State);
+                       true ->
+                         marshal({Tag, Object}, State)
+                    end,
+  {reply, Ret, NewState};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -83,9 +83,9 @@ marshal(as_map_key, {?Null, _}, _S=#state{}) ->
 marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Boolean, Val).
 
-marshal({?Null, _}, _S=#state{}) ->
-  emit_object(undefined);
 
+marshal({?Null, _Null}, _S=#state{}) ->
+  emit_object(undefined);
 marshal({?Boolean, Val}, _S=#state{}) ->
   emit_object(Val);
 marshal({?Int, I}, _S=#state{}) ->
@@ -100,12 +100,27 @@ marshal({?Map, M}, S=#state{}) ->
                     {"", S1}, M),
   {MapEnd, S3} = emit_map_end(S2),
   {MapStart ++ Body ++ MapEnd, S3};
+marshal({?QUOTE, Rep}, S=#state{}) ->
+  emit_tagged(?QUOTE, Rep, S);
 marshal({Tag, Rep}, S=#state{}) ->
+  emit_encoded(Tag, Rep, S).
+
+emit_tagged(Tag, Rep, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
   EncodedTag = transit_rolling_cache:encode(?ESC ++ Tag),
   {Body, S2} =  marshal(Rep, S1),
   {ArrayEnd, S3} = emit_array_end(S2),
   {ArrayStart ++ emit_object(EncodedTag) ++ Body ++ ArrayEnd, S3}.
+
+emit_encoded(Tag, Rep, S) when length(Tag) =:= 1 ->
+  case io_lib:printable_list(Rep) of
+    true ->
+      emit_string(?ESC ++ Tag, Rep, S);
+    false ->
+      erlang:throw(io_lib:format("Cannot be encoded as string: ~s", [Rep]))
+  end;
+emit_encoded(Tag, Rep, S) ->
+  emit_tagged(Tag, Rep, S).
 
 emit_string(as_map_key, Prefix, Tag, String) ->
   Encoded = transit_rolling_cache:encode(as_map_key, Prefix ++ Tag ++ escape(String)),
@@ -127,18 +142,18 @@ emit_object(Obj) ->
   end.
 
 emit_array_start(S=#state{}) ->
-  Ret = write_sep(S) ++ "[",
-  S1 = push_level(S),
-  {Ret, S1}.
+  {Sep, S1} = write_sep(S),
+  S2 = push_level(S1),
+  {Sep ++ "[", S2}.
 
 emit_array_end(S=#state{}) ->
   S1 = pop_level(S),
   {"]", S1}.
 
 emit_map_start(S=#state{}) ->
-  Ret = write_sep(S) ++ "{",
+  {Sep, S1} = write_sep(S),
   S1 = push_level(S),
-  {Ret, S1}.
+  {Sep ++ "{", push_level(S1)}.
 
 emit_map_end(S=#state{}) ->
   S1 = pop_level(S),
@@ -177,7 +192,7 @@ write_sep(State=#state{started=S, is_key=K}) ->
     {value, true} ->
       queue:tail(S),
       S1 = queue:in(false, S),
-      State#state{started=S1};
+      {"", State#state{started=S1}};
     _ ->
       case queue:peek(K) of
         true ->
@@ -190,14 +205,14 @@ write_sep(State=#state{started=S, is_key=K}) ->
           K1 = queue:in(true, K),
           {",", State#state{started=K1}};
         empty ->
-          ","
+          {",", State}
       end
   end.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start() ->
-  {ok, Pid} = start_link(),
+  {ok, Pid} = ?MODULE:start_link(),
   Pid.
 
 emit_string_test() ->
