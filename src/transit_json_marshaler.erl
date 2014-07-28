@@ -77,19 +77,29 @@ code_change(_OldVsn, State, _Extra) ->
 marshal_top(Obj) ->
   gen_server:call(?MODULE, {marshal_top, Obj}).
 
-marshal(as_map_key, {?Null, _}, S=#state{}) ->
+marshal(as_map_key, {?Null, _}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Null, undefined);
 
-marshal(as_map_key, {?Boolean, Val}, S=#state{}) ->
+marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Boolean, Val).
 
-marshal({?Null, _}, S=#state{}) ->
+marshal({?Null, _}, _S=#state{}) ->
   emit_object(undefined);
 
-marshal({?Boolean, Val}, S=#state{}) ->
+marshal({?Boolean, Val}, _S=#state{}) ->
   emit_object(Val);
-marshal({?Int, I}, S=#state{}) ->
+marshal({?Int, I}, _S=#state{}) ->
   emit_object(I);
+marshal({?Map, M}, S=#state{}) ->
+  {MapStart, S1} = emit_map_start(S),
+  {Body, S2} = maps:foldl(fun (K, V, {In, NS1}) ->
+                        {MK, NS2} = marshal(as_map_key, K, NS1),
+                        {MV, NS3} = marshal(V, NS2),
+                        {In ++ MK ++ MV, NS3}
+                    end,
+                    {"", S1}, M),
+  {MapEnd, S3} = emit_map_end(S2),
+  {MapStart ++ Body ++ MapEnd, S3};
 marshal({Tag, Rep}, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
   EncodedTag = transit_rolling_cache:encode(?ESC ++ Tag),
@@ -118,12 +128,21 @@ emit_object(Obj) ->
 
 emit_array_start(S=#state{}) ->
   Ret = write_sep(S) ++ "[",
-  push_level(S),
-  {Ret, S}.
+  S1 = push_level(S),
+  {Ret, S1}.
 
 emit_array_end(S=#state{}) ->
-  pop_level(S),
-  "]".
+  S1 = pop_level(S),
+  {"]", S1}.
+
+emit_map_start(S=#state{}) ->
+  Ret = write_sep(S) ++ "{",
+  S1 = push_level(S),
+  {Ret, S1}.
+
+emit_map_end(S=#state{}) ->
+  S1 = pop_level(S),
+  {"}", S1}.
 
 escape(S) ->
   if S =:= ?MAP_AS_ARR ->
