@@ -134,7 +134,7 @@ encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
     {ok, Val} ->
       {Val, C};
     error ->
-      Key = encode_key(maps:size(Kv)),
+      Key = encode_key(dict:size(Kv)),
       {Name, C#cache{kv=dict:store(Key, Name, Kv), vk=dict:store(Name, Key, Vk)}}
   end.
 
