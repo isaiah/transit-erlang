@@ -25,3 +25,7 @@
 -record(write_handler, {tag :: fun((any()) -> string()),
                         rep :: fun((any()) -> string()),
                         string_rep :: fun((any()) -> string())}).
+
+-record(tagged_value, {tag :: string(),
+                       rep :: string(),
+                       string_rep = undefined :: string() | atom()}).

@@ -56,9 +56,9 @@ boolean_rep(B) ->
 boolean_string_rep(B) ->
   case B of
     true ->
-      <<"t">>;
+      "t";
     false ->
-      <<"f">>
+      "f"
   end.
 
 %%% List handler
@@ -79,15 +79,15 @@ map_string_rep(_M) ->
 
 %%% Keyword handler
 keyword_tag(_K) ->
-  <<":">>.
+  ":".
 keyword_rep(K) ->
-  K.
+  atom_to_list(K).
 keyword_string_rep(K) ->
-  K.
+  atom_to_list(K).
 
 %%% UUID handler
 uuid_tag(_U) ->
-  <<"u">>.
+  "u".
 uuid_rep(U) ->
   [U bsr 64, U band ?UUID_MASK].
 uuid_string_rep(U) ->
@@ -95,7 +95,7 @@ uuid_string_rep(U) ->
 
 %%% URI handler
 uri_tag(_U) ->
-  <<"r">>.
+  "r".
 uri_rep(U) ->
   U.
 uri_string_rep(U) ->
@@ -123,6 +123,18 @@ handler(Data) when is_atom(Data) ->
     _ ->
       #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
   end;
-%%% anything else is string
+handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep, string_rep=Str}) ->
+  #write_handler{tag=fun (_) -> Tag end, rep=fun (_) -> Rep end, string_rep = fun (_) -> Str end};
+
 handler(_) ->
   #write_handler{}.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+int_test() ->
+  Int = 1234,
+  IntH = handler(Int),
+  ?assertEqual("i", apply(IntH#write_handler.tag, [Int])).
+
+-endif.

@@ -38,24 +38,12 @@ init([]) ->
   S = queue:from_list([true]),
   {ok, #state{started=S}}.
 
-handle_call({emit_object, Object, _AsMapKey}, _From, State) ->
-  Rep = if is_bitstring(Object) ->
-             <<"\"">> ++ Object ++ <<"\"">>;
-           is_integer(Object) ->
-             integer_to_list(Object);
-           is_float(Object) ->
-             float_to_list(Object);
-           is_atom(Object) ->
-             atom_to_list(Object)
-        end,
-  {reply, Rep, State};
-
 handle_call({marshal_top, Object}, _From, State=#state{}) ->
   Handler = transit_write_handlers:handler(Object),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
   {Ret, NewState} = if length(Tag) =:= 1 ->
-                         marshal({?QUOTE, Object}, State);
+                         marshal(#tagged_value{tag=?QUOTE, rep=Object}, State);
                        true ->
                          marshal({Tag, Object}, State)
                     end,
@@ -88,35 +76,31 @@ marshal(as_map_key, {?Null, _}, _S=#state{}) ->
 marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Boolean, Val).
 
+-spec marshal(any(), S) -> {string(), S} when S :: #state{}.
+marshal(TaggedVal=#tagged_value{}, S=#state{}) ->
+  emit_tagged(TaggedVal, S);
 
--spec marshal({string(), any()}, S) -> {string(), S} when S :: #state{}.
-marshal({?Null, _Null}, S=#state{}) ->
-  emit_object(undefined, S);
-marshal({?Boolean, Val}, S=#state{}) ->
-  emit_object(Val, S);
-marshal({?Int, I}, S=#state{}) ->
-  emit_object(I, S);
-marshal({?Map, M}, S=#state{}) ->
-  {MapStart, S1} = emit_map_start(S),
-  {Body, S2} = maps:foldl(fun (K, V, {In, NS1}) ->
-                        {MK, NS2} = marshal(as_map_key, K, NS1),
-                        {MV, NS3} = marshal(V, NS2),
-                        {In ++ MK ++ MV, NS3}
-                    end,
-                    {"", S1}, M),
-  {MapEnd, S3} = emit_map_end(S2),
-  {MapStart ++ Body ++ MapEnd, S3};
-marshal({?QUOTE, Rep}, S=#state{}) ->
-  emit_tagged(?QUOTE, Rep, S);
-marshal({Tag, Rep}, S=#state{}) ->
-  emit_encoded(?ESC, Tag, Rep, S);
-marshal(Rep, S) ->
+marshal(Rep, S=#state{}) ->
   Handler = transit_write_handlers:handler(Rep),
   TagFun = Handler#write_handler.tag,
-  Tag = TagFun(Rep),
-  emit_encoded("", Tag, Rep, S).
+  case TagFun(Rep) of
+    ?Null ->
+      emit_object(undefined, S);
+    ?Boolean ->
+      emit_object(Rep, S);
+    ?Int ->
+      emit_object(Rep, S);
+    ?Array ->
+      emit_array(Rep, S);
+    ?Map ->
+      emit_map(Rep, S);
+    ?String ->
+      emit_string("", Rep, S);
+    T ->
+      emit_encoded("", T, Rep, S)
+  end.
 
-emit_tagged(Tag, Rep, S=#state{}) ->
+emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
   EncodedTag = transit_rolling_cache:encode(?ESC ++ "#" ++ Tag),
   {Tag1, S2} = emit_object(EncodedTag, S1),
@@ -124,15 +108,18 @@ emit_tagged(Tag, Rep, S=#state{}) ->
   {ArrayEnd, S4} = emit_array_end(S3),
   {ArrayStart ++ Tag1 ++ Body ++ ArrayEnd, S4}.
 
-emit_encoded(_Prefix, Tag, Rep, S) when length(Tag) =:= 1 ->
+emit_encoded(Prefix, Tag, Rep, S) when length(Tag) =:= 1 ->
   case io_lib:printable_list(Rep) of
     true ->
-      emit_string("", Rep, S);
+      emit_string(Prefix, Rep, S);
     false ->
-      erlang:throw(io_lib:format("Cannot be encoded as string: ~s", [Rep]))
+      emit_tagged(#tagged_value{tag=Tag, rep=Rep}, S)
   end;
-emit_encoded(Prefix, Tag, Rep, S) ->
-  emit_tagged(Prefix ++ Tag, Rep, S).
+emit_encoded(_Prefix, Tag, Rep, S) ->
+  Handler = transit_write_handlers:handler(Rep),
+  RepFun = Handler#write_handler.string_rep,
+  StrRep = RepFun(Rep),
+  emit_tagged(#tagged_value{tag=Tag, rep=StrRep}, S).
 
 -spec emit_string(as_map_key, string(), string(), S) -> {string(), S} when S :: #state{}.
 emit_string(as_map_key, Tag, String, S=#state{}) ->
@@ -148,10 +135,17 @@ emit_object(Obj, S=#state{}) ->
   {Sep, S1} = write_sep(S),
   Body = if is_bitstring(Obj) ->
               quote_string(Obj);
-            is_number(Obj) ->
-              io_lib:format("~p", [Obj]);
+            is_integer(Obj) ->
+              integer_to_list(Obj);
+            is_float(Obj) ->
+              float_to_list(Obj);
             is_atom(Obj) ->
-              atom_to_list(Obj);
+              case Obj of
+                undefined ->
+                  quote_string("null");
+                _ ->
+                  atom_to_list(Obj)
+              end;
             true ->
               case io_lib:printable_list(Obj) of
                 true ->
@@ -161,6 +155,27 @@ emit_object(Obj, S=#state{}) ->
               end
          end,
   {Sep ++ Body, S1}.
+
+emit_map(M, S=#state{}) ->
+  {MapStart, S1} = emit_map_start(S),
+  {Body, S2} = maps:foldl(fun (K, V, {In, NS1}) ->
+                        {MK, NS2} = marshal(as_map_key, K, NS1),
+                        {MV, NS3} = marshal(V, NS2),
+                        {In ++ MK ++ MV, NS3}
+                    end,
+                    {"", S1}, M),
+  {MapEnd, S3} = emit_map_end(S2),
+  {MapStart ++ Body ++ MapEnd, S3}.
+
+emit_array(A, S=#state{}) ->
+  {ArrayStart, S1} = emit_array_start(S),
+  {Body, S2} = maps:foldl(fun (E, {In, NS1}) ->
+                        {NE, NS2} = marshal(E, NS1),
+                        {In ++ NE, NS2}
+                    end,
+                    {"", S1}, A),
+  {ArrayEnd, S3} = emit_array_end(S2),
+  {ArrayStart ++ Body ++ ArrayEnd, S3}.
 
 emit_array_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
@@ -237,16 +252,20 @@ quote_string(Str) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  {ok, _} = start(),
+  %{ok, _} = start(),
   {ok, _} = transit_rolling_cache:start_link(),
   ok.
 
-emit_string_test_() ->
+marshal_tagged_test_() ->
   {setup,
    fun start_server/0,
-   fun marshal_string/1}.
+   fun marshals_tagged/1}.
 
-marshal_string(ok) ->
-  [?_assertEqual("[\"~#'\",\"foo\"]", marshal_top("foo"))].
+
+marshals_tagged(ok) ->
+  Started = queue:from_list([true]),
+  Tests = [{"[\"~#'\",\"foo\"]", "foo"},
+           {"[\"~#'\",1234]", 1234}],
+  [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, #state{started=Started}) end || {Res, Rep} <- Tests].
 
 -endif.
