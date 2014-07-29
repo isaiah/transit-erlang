@@ -107,8 +107,13 @@ handler(Data) when is_float(Data) ->
   #write_handler{tag = fun float_tag/1, rep = fun float_rep/1, string_rep = fun float_string_rep/1};
 handler(Data) when is_integer(Data) ->
   #write_handler{tag = fun integer_tag/1, rep = fun integer_rep/1, string_rep = fun integer_string_rep/1};
-handler(Data) when is_tuple(Data); is_list(Data) ->
-  #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1};
+handler(Data) when is_list(Data) ->
+  case io_lib:printable_list(Data) of
+    true ->
+      #write_handler{tag = fun string_tag/1, rep = fun string_rep/1, string_rep = fun string_string_rep/1};
+    false ->
+      #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1}
+  end;
 handler(Data) when is_map(Data) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_atom(Data) ->
@@ -120,4 +125,4 @@ handler(Data) when is_atom(Data) ->
   end;
 %%% anything else is string
 handler(_) ->
-  #write_handler{tag = fun string_tag/1, rep = fun string_rep/1, string_rep = fun string_string_rep/1}.
+  #write_handler{}.

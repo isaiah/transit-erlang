@@ -49,7 +49,8 @@ handle_call({emit_object, Object, _AsMapKey}, _From, State) ->
 
 handle_call({marshal_top, Object}, _From, State=#state{}) ->
   Handler = transit_write_handlers:handler(Object),
-  Tag = apply(Handler#write_handler.tag, [Object]),
+  TagFun = Handler#write_handler.tag,
+  Tag = TagFun(Object),
   {Ret, NewState} = if length(Tag) =:= 1 ->
                          marshal({?QUOTE, Object}, State);
                        true ->
@@ -77,13 +78,15 @@ code_change(_OldVsn, State, _Extra) ->
 marshal_top(Obj) ->
   gen_server:call(?MODULE, {marshal_top, Obj}).
 
+-spec marshal(as_map_key, {binary(), any()}, S) -> {string(), S} when S :: #state{}.
 marshal(as_map_key, {?Null, _}, _S=#state{}) ->
-  emit_string(as_map_key, ?ESC, ?Null, undefined);
+  emit_string(as_map_key, ?ESC, ?Null, "null");
 
 marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Boolean, Val).
 
 
+-spec marshal({string(), any()}, S) -> {string(), S} when S :: #state{}.
 marshal({?Null, _Null}, _S=#state{}) ->
   emit_object(undefined);
 marshal({?Boolean, Val}, _S=#state{}) ->
@@ -103,6 +106,11 @@ marshal({?Map, M}, S=#state{}) ->
 marshal({?QUOTE, Rep}, S=#state{}) ->
   emit_tagged(?QUOTE, Rep, S);
 marshal({Tag, Rep}, S=#state{}) ->
+  emit_encoded(Tag, Rep, S);
+marshal(Rep, S) ->
+  Handler = transit_write_handlers:handler(Rep),
+  TagFun = Handler#write_handler.tag,
+  Tag = TagFun(Rep),
   emit_encoded(Tag, Rep, S).
 
 emit_tagged(Tag, Rep, S=#state{}) ->
@@ -113,6 +121,7 @@ emit_tagged(Tag, Rep, S=#state{}) ->
   {ArrayStart ++ emit_object(EncodedTag) ++ Body ++ ArrayEnd, S3}.
 
 emit_encoded(Tag, Rep, S) when length(Tag) =:= 1 ->
+  io:format("emit encoded~s~n", [Tag]),
   case io_lib:printable_list(Rep) of
     true ->
       emit_string(?ESC ++ Tag, Rep, S);
@@ -120,12 +129,15 @@ emit_encoded(Tag, Rep, S) when length(Tag) =:= 1 ->
       erlang:throw(io_lib:format("Cannot be encoded as string: ~s", [Rep]))
   end;
 emit_encoded(Tag, Rep, S) ->
+  io:format("emit tagged~s~n", [Tag]),
   emit_tagged(Tag, Rep, S).
 
+-spec emit_string(as_map_key, string(), binary(), string()) -> string().
 emit_string(as_map_key, Prefix, Tag, String) ->
   Encoded = transit_rolling_cache:encode(as_map_key, Prefix ++ Tag ++ escape(String)),
   emit_object(Encoded).
 
+-spec emit_string(string(), string(), string()) -> string().
 emit_string(Prefix, Tag, String) ->
   {ok, Encoded} = transit_rolling_cache:encode(Prefix ++ Tag ++ escape(String)),
   emit_object(Encoded).
@@ -179,14 +191,17 @@ is_escapable(S) ->
       false
   end.
 
+-spec push_level(S) -> S when S:: #state{}.
 push_level(State=#state{started=S, is_key=K}) ->
   State#state{started=queue:in(true, S), is_key=queue:in(true, K)}.
 
+-spec pop_level(S) -> S when S:: #state{}.
 pop_level(State=#state{started=S1, is_key=K1}) ->
   S2 = queue:tail(S1),
   K2 = queue:tail(K1),
   State#state{started=S2, is_key=K2}.
 
+-spec write_sep(S) -> {string(), S} when S :: #state{}.
 write_sep(State=#state{started=S, is_key=K}) ->
   case queue:peek(S) of
     {value, true} ->
@@ -212,10 +227,16 @@ write_sep(State=#state{started=S, is_key=K}) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start() ->
+  io:format("start", []),
   {ok, Pid} = ?MODULE:start_link(),
   Pid.
 
-emit_string_test() ->
-  {"~#s: foo", S} = marshal_top("foo").
+emit_string_test_() ->
+  {setup,
+   fun start/0,
+   fun marshal_string/1}.
+
+marshal_string(_Pid) ->
+  [?_assertEqual(<<"~#s: foo">>, marshal_top("foo"))].
 
 -endif.

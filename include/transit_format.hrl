@@ -11,14 +11,14 @@
 -define(QUOTE, "'").
 -define(MAP_AS_ARR, "^ ").
 
--define(Null, <<"_">>).
--define(Int, <<"i">>).
--define(BigInt, <<"n">>).
--define(Float, <<"f">>).
--define(String, <<"s">>).
--define(Boolean, <<"?">>).
--define(Array, <<"array">>).
--define(Map, <<"map">>).
+-define(Null, "_").
+-define(Int, "i").
+-define(BigInt, "n").
+-define(Float, "f").
+-define(String, "s").
+-define(Boolean, "?").
+-define(Array, "array").
+-define(Map, "map").
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 

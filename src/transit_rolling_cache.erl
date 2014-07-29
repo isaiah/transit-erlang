@@ -9,11 +9,11 @@
 -define(FIRST_ORD, 48).
 -define(MIN_SIZE_CACHEABLE, 4).
 
--record(cache, {kv=dict:new(),
-                vk=dict:new()}).
+-record(cache, {kv=dict:new() :: dict:dict(),
+                vk=dict:new() :: dict:dict()}).
 
 start_link() ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, []).
+  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
   {ok, #cache{}}.
@@ -27,13 +27,14 @@ decode(Name) ->
 handle_call({encode, Name}, _From, C=#cache{kv=Kv}) ->
   case dict:find(Name, Kv) of
     {ok, Val} ->
-      {Val, C};
+      {reply, Val, C};
     error ->
       case is_cacheable(Name) of
         true ->
-          encache(Name, C);
+          {Val, C1} = encache(Name, C),
+          {reply, Val, C1};
         false ->
-          {Name, C}
+          {reply, Name, C}
       end
   end;
 
@@ -62,13 +63,13 @@ handle_call({decode, Name}, _From, C=#cache{kv=Kv}) ->
       end
   end;
 handle_call(_Msg, _From, C) ->
-  {reply, C}.
+  {reply, ok, C}.
 
 handle_cast(_Msg, C) ->
   {noreply, C}.
 
 handle_info(_Info, C) ->
-  {ok, C}.
+  {noreply, C}.
 
 code_change(_OldVsn, C, _Extra) ->
   {ok, C}.
@@ -87,7 +88,8 @@ is_cache_key(Name) when length(Name) > 0 ->
       end;
     false -> false
   end;
-is_cache_key(_) -> false.
+is_cache_key(_) ->
+  false.
 
 -spec encode_key(integer()) -> string().
 encode_key(Num) ->
@@ -96,7 +98,7 @@ encode_key(Num) ->
   if Hi =:= 0 ->
        ?SUB ++ integer_to_list(Lo + ?FIRST_ORD);
      true ->
-       ?SUB ++ integer_to_list(Hi + ?FIRST_ORD) + integer_to_list(Lo + ?FIRST_ORD)
+       ?SUB ++ integer_to_list(Hi + ?FIRST_ORD) ++ integer_to_list(Lo + ?FIRST_ORD)
   end.
 
 -spec decode_key(string()) -> integer().
@@ -108,17 +110,19 @@ decode_key(Str) ->
       (ord(lists:nth(3, Str)) - ?FIRST_ORD) + ?CACHE_CODE_DIGITS * (ord(lists:nth(2, Str)) - ?FIRST_ORD)
   end.
 
--spec is_cacheable(string(), boolean()) -> boolean().
+-spec is_cacheable(as_map_key, string()) -> true.
 is_cacheable(as_map_key, Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
   true.
 
+-spec is_cacheable(string()) -> boolean().
 is_cacheable(Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
   case string:substr(Str, 1, 2) of
     "~#" -> true;
     "~:" -> true;
     "~$" -> true;
     _ -> false
-  end.
+  end;
+is_cacheable(_) -> false.
 
 -spec ord(char()) -> integer().
 ord(Char) ->
@@ -133,3 +137,13 @@ encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
       Key = encode_key(maps:size(Kv)),
       {Name, C#cache{kv=dict:store(Key, Name, Kv), vk=dict:store(Name, Key, Vk)}}
   end.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+is_cache_key_test() ->
+  ?assert(is_cache_key("^123")),
+  ?assertNot(is_cache_key("^ 123")),
+  ?assertNot(is_cache_key("123")),
+  ?assertNot(is_cache_key("")).
+-endif.
