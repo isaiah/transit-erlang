@@ -10,7 +10,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0]).
+-export([start_link/0, start/0]).
 -export([marshal_top/1]).
 
 %% ------------------------------------------------------------------
@@ -26,6 +26,9 @@
 
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+start() ->
+  gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -87,12 +90,12 @@ marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
 
 
 -spec marshal({string(), any()}, S) -> {string(), S} when S :: #state{}.
-marshal({?Null, _Null}, _S=#state{}) ->
-  emit_object(undefined);
-marshal({?Boolean, Val}, _S=#state{}) ->
-  emit_object(Val);
-marshal({?Int, I}, _S=#state{}) ->
-  emit_object(I);
+marshal({?Null, _Null}, S=#state{}) ->
+  emit_object(undefined, S);
+marshal({?Boolean, Val}, S=#state{}) ->
+  emit_object(Val, S);
+marshal({?Int, I}, S=#state{}) ->
+  emit_object(I, S);
 marshal({?Map, M}, S=#state{}) ->
   {MapStart, S1} = emit_map_start(S),
   {Body, S2} = maps:foldl(fun (K, V, {In, NS1}) ->
@@ -106,57 +109,62 @@ marshal({?Map, M}, S=#state{}) ->
 marshal({?QUOTE, Rep}, S=#state{}) ->
   emit_tagged(?QUOTE, Rep, S);
 marshal({Tag, Rep}, S=#state{}) ->
-  emit_encoded(Tag, Rep, S);
+  emit_encoded(?ESC, Tag, Rep, S);
 marshal(Rep, S) ->
   Handler = transit_write_handlers:handler(Rep),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Rep),
-  emit_encoded(Tag, Rep, S).
+  emit_encoded("", Tag, Rep, S).
 
 emit_tagged(Tag, Rep, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
-  EncodedTag = transit_rolling_cache:encode(?ESC ++ Tag),
-  {Body, S2} =  marshal(Rep, S1),
-  {ArrayEnd, S3} = emit_array_end(S2),
-  {ArrayStart ++ emit_object(EncodedTag) ++ Body ++ ArrayEnd, S3}.
+  EncodedTag = transit_rolling_cache:encode(?ESC ++ "#" ++ Tag),
+  {Tag1, S2} = emit_object(EncodedTag, S1),
+  {Body, S3} =  marshal(Rep, S2),
+  {ArrayEnd, S4} = emit_array_end(S3),
+  {ArrayStart ++ Tag1 ++ Body ++ ArrayEnd, S4}.
 
-emit_encoded(Tag, Rep, S) when length(Tag) =:= 1 ->
-  io:format("emit encoded~s~n", [Tag]),
+emit_encoded(_Prefix, Tag, Rep, S) when length(Tag) =:= 1 ->
   case io_lib:printable_list(Rep) of
     true ->
-      emit_string(?ESC ++ Tag, Rep, S);
+      emit_string("", Rep, S);
     false ->
       erlang:throw(io_lib:format("Cannot be encoded as string: ~s", [Rep]))
   end;
-emit_encoded(Tag, Rep, S) ->
-  io:format("emit tagged~s~n", [Tag]),
-  emit_tagged(Tag, Rep, S).
+emit_encoded(Prefix, Tag, Rep, S) ->
+  emit_tagged(Prefix ++ Tag, Rep, S).
 
--spec emit_string(as_map_key, string(), binary(), string()) -> string().
-emit_string(as_map_key, Prefix, Tag, String) ->
-  Encoded = transit_rolling_cache:encode(as_map_key, Prefix ++ Tag ++ escape(String)),
-  emit_object(Encoded).
+-spec emit_string(as_map_key, string(), string(), S) -> {string(), S} when S :: #state{}.
+emit_string(as_map_key, Tag, String, S=#state{}) ->
+  Encoded = transit_rolling_cache:encode(as_map_key, Tag ++ escape(String)),
+  emit_object(Encoded, S).
 
 -spec emit_string(string(), string(), string()) -> string().
-emit_string(Prefix, Tag, String) ->
-  {ok, Encoded} = transit_rolling_cache:encode(Prefix ++ Tag ++ escape(String)),
-  emit_object(Encoded).
+emit_string(Tag, String, S=#state{}) ->
+  Encoded = transit_rolling_cache:encode(Tag ++ escape(String)),
+  emit_object(Encoded, S).
 
-emit_object(Obj) ->
-  if is_bitstring(Obj) ->
-       EscapeSlash = re:replace(Obj, "\\\\", "\\\\"),
-       EscapeQuote = re:replace(EscapeSlash, "\\\"", "\\\""),
-       "\\\"" ++ EscapeQuote ++ "\\\"";
-     is_number(Obj) ->
-       io_lib:format("~p", [Obj]);
-     is_atom(Obj) ->
-       atom_to_list(Obj)
-  end.
+emit_object(Obj, S=#state{}) ->
+  {Sep, S1} = write_sep(S),
+  Body = if is_bitstring(Obj) ->
+              quote_string(Obj);
+            is_number(Obj) ->
+              io_lib:format("~p", [Obj]);
+            is_atom(Obj) ->
+              atom_to_list(Obj);
+            true ->
+              case io_lib:printable_list(Obj) of
+                true ->
+                  quote_string(Obj);
+                false ->
+                  erlang:throws("don't know how to encode object.")
+              end
+         end,
+  {Sep ++ Body, S1}.
 
 emit_array_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
-  S2 = push_level(S1),
-  {Sep ++ "[", S2}.
+  {Sep ++ "[", push_level(S1)}.
 
 emit_array_end(S=#state{}) ->
   S1 = pop_level(S),
@@ -171,18 +179,18 @@ emit_map_end(S=#state{}) ->
   S1 = pop_level(S),
   {"}", S1}.
 
+-spec escape(string()) -> string().
+escape(S) when S =:= ?MAP_AS_ARR ->
+  S;
 escape(S) ->
-  if S =:= ?MAP_AS_ARR ->
-       S;
-     true ->
-       case is_escapable(S) of
-         true ->
-           ?ESC ++ S;
-         false ->
-           S
-       end
+  case is_escapable(S) of
+    true ->
+      ?ESC ++ S;
+    false ->
+      S
   end.
 
+-spec is_escapable(string()) -> boolean().
 is_escapable(S) ->
   case re:run(S, "^\\" ++ ?SUB ++ "|" ++ ?ESC ++ "|" ++ ?RES) of
     {match, _} ->
@@ -192,51 +200,53 @@ is_escapable(S) ->
   end.
 
 -spec push_level(S) -> S when S:: #state{}.
-push_level(State=#state{started=S, is_key=K}) ->
-  State#state{started=queue:in(true, S), is_key=queue:in(true, K)}.
+push_level(State=#state{started=S}) ->
+  State#state{started=queue:in(true, S)}.
 
 -spec pop_level(S) -> S when S:: #state{}.
-pop_level(State=#state{started=S1, is_key=K1}) ->
-  S2 = queue:tail(S1),
-  K2 = queue:tail(K1),
-  State#state{started=S2, is_key=K2}.
+pop_level(State=#state{started=S, is_key=K}) ->
+  {_, S1} = queue:out_r(S),
+  {_, K1} = queue:out_r(K),
+  State#state{started=S1, is_key=K1}.
 
 -spec write_sep(S) -> {string(), S} when S :: #state{}.
 write_sep(State=#state{started=S, is_key=K}) ->
-  case queue:peek(S) of
-    {value, true} ->
-      queue:tail(S),
-      S1 = queue:in(false, S),
-      {"", State#state{started=S1}};
+  case queue:out_r(S) of
+    {{value, true}, S1} ->
+      S2 = queue:in(false, S1),
+      {"", State#state{started=S2}};
     _ ->
-      case queue:peek(K) of
-        true ->
-          queue:tail(K),
-          K1 = queue:in(false, K),
-
-          {":", State#state{started=K1}};
-        false ->
-          queue:tail(K),
-          K1 = queue:in(true, K),
-          {",", State#state{started=K1}};
-        empty ->
+      case queue:out_r(K) of
+        {{value, true}, K1} ->
+          K2 = queue:in(false, K1),
+          {":", State#state{is_key=K2}};
+        {{value, false}, K1} ->
+          K2 = queue:in(true, K1),
+          {",", State#state{is_key=K2}};
+        {empty, K} ->
           {",", State}
       end
   end.
 
+quote_string(Str) ->
+  EscapeSlash = re:replace(Str, "\\\\", "\\\\"),
+  EscapeQuote = re:replace(EscapeSlash, "\\\"", "\\\""),
+  "\"" ++ EscapeQuote ++ "\"".
+
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-start() ->
-  io:format("start", []),
-  {ok, Pid} = ?MODULE:start_link(),
-  Pid.
+start_server() ->
+  {ok, _} = start(),
+  {ok, _} = transit_rolling_cache:start_link(),
+  ok.
 
 emit_string_test_() ->
   {setup,
-   fun start/0,
+   fun start_server/0,
    fun marshal_string/1}.
 
-marshal_string(_Pid) ->
-  [?_assertEqual(<<"~#s: foo">>, marshal_top("foo"))].
+marshal_string(ok) ->
+  [?_assertEqual("[\"~#'\",\"foo\"]", marshal_top("foo"))].
 
 -endif.
