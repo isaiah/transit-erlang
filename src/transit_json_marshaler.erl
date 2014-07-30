@@ -10,7 +10,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, start/0]).
+-export([start_link/0, start/0, stop/0]).
 -export([marshal_top/1]).
 
 %% ------------------------------------------------------------------
@@ -30,6 +30,9 @@ start_link() ->
 start() ->
   gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
+stop() ->
+  gen_server:cast(?MODULE, stop).
+
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
@@ -45,12 +48,14 @@ handle_call({marshal_top, Object}, _From, State=#state{}) ->
   {Ret, NewState} = if length(Tag) =:= 1 ->
                          marshal(#tagged_value{tag=?QUOTE, rep=Object}, State);
                        true ->
-                         marshal({Tag, Object}, State)
+                         marshal(Object, State)
                     end,
   {reply, Ret, NewState};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
+handle_cast(stop, State) ->
+  {stop, normal, State};
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
@@ -70,20 +75,34 @@ marshal_top(Obj) ->
   gen_server:call(?MODULE, {marshal_top, Obj}).
 
 -spec marshal(as_map_key, {binary(), any()}, S) -> {bitstring(), S} when S :: #state{}.
-marshal(as_map_key, {?Null, _}, _S=#state{}) ->
-  emit_string(as_map_key, ?ESC, ?Null, "null");
-
-marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
-  emit_string(as_map_key, ?ESC, ?Boolean, Val).
+marshal(as_map_key, Obj, S=#state{}) ->
+  Handler = transit_write_handlers:handler(Obj),
+  TagFun = Handler#write_handler.tag,
+  StrRepFun = Handler#write_handler.string_rep,
+  Rep = StrRepFun(Obj),
+  case TagFun(Obj) of
+    ?Null ->
+      emit_null(as_map_key, Rep, S);
+    ?Boolean ->
+      emit_boolean(as_map_key, Rep, S);
+    ?Int ->
+      emit_int(as_map_key, Rep, S);
+    ?String ->
+      emit_string(as_map_key, <<"">>, Rep, S);
+    T ->
+      emit_encoded(T, Rep, S)
+  end.
 
 -spec marshal(any(), S) -> {bitstring(), S} when S :: #state{}.
 marshal(TaggedVal=#tagged_value{}, S=#state{}) ->
   emit_tagged(TaggedVal, S);
 
-marshal(Rep, S=#state{}) ->
-  Handler = transit_write_handlers:handler(Rep),
+marshal(Obj, S=#state{}) ->
+  Handler = transit_write_handlers:handler(Obj),
+  RepFun = Handler#write_handler.rep,
+  Rep = RepFun(Obj),
   TagFun = Handler#write_handler.tag,
-  case TagFun(Rep) of
+  case TagFun(Obj) of
     ?Null ->
       emit_object(undefined, S);
     ?Boolean ->
@@ -98,9 +117,20 @@ marshal(Rep, S=#state{}) ->
       emit_string(<<"">>, Rep, S);
     ?String ->
       emit_string(<<"">>, list_to_binary(Rep), S);
+    T when bit_size(T) =:= 8 ->
+      emit_string(<<?ESC/bitstring, T/bitstring>>, list_to_binary(Rep), S);
     T ->
-      emit_encoded(<<"">>, T, Rep, S)
+      emit_encoded(T, Rep, S)
   end.
+
+emit_null(as_map_key, _Rep, S=#state{}) ->
+  emit_string(as_map_key, <<?ESC/bitstring, ?Null/bitstring>>, <<"null">>, S).
+
+emit_boolean(as_map_key, Rep, S) ->
+  emit_string(as_map_key, <<?ESC/bitstring, ?Boolean/bitstring>>, Rep, S).
+
+emit_int(as_map_key, Rep, S) ->
+  emit_string(as_map_key, <<?ESC/bitstring, ?Int/bitstring>>, Rep, S).
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
@@ -110,14 +140,7 @@ emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S=#state{}) ->
   {ArrayEnd, S4} = emit_array_end(S3),
   {<<ArrayStart/bitstring, Tag1/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S4}.
 
-emit_encoded(Prefix, Tag, Rep, S) when length(Tag) =:= 1 ->
-  case io_lib:printable_list(Rep) of
-    true ->
-      emit_string(Prefix, Rep, S);
-    false ->
-      emit_tagged(#tagged_value{tag=Tag, rep=Rep}, S)
-  end;
-emit_encoded(_Prefix, Tag, Rep, S) ->
+emit_encoded(Tag, Rep, S) ->
   Handler = transit_write_handlers:handler(Rep),
   RepFun = Handler#write_handler.string_rep,
   StrRep = RepFun(Rep),
@@ -160,26 +183,29 @@ emit_object(Obj, S=#state{}) ->
          end,
   {<<Sep/bitstring, Body/bitstring>>, S1}.
 
-emit_map(M, S=#state{}) ->
-  {MapStart, S1} = emit_map_start(S),
-  {Body, S2} = maps:foldl(fun (K, V, {In, NS1}) ->
-                        {MK, NS2} = marshal(as_map_key, K, NS1),
-                        {MV, NS3} = marshal(V, NS2),
-                        {In ++ MK ++ MV, NS3}
-                    end,
-                    {<<"">>, S1}, M),
-  {MapEnd, S3} = emit_map_end(S2),
-  {MapStart ++ Body ++ MapEnd, S3}.
+%emit_map(M, S=#state{}) ->
+%  {MapStart, S1} = emit_map_start(S),
+%  {Body, S2} = maps:fold(fun (K, V, {In, NS1}) ->
+%                        {MK, NS2} = marshal(as_map_key, K, NS1),
+%                        {MV, NS3} = marshal(V, NS2),
+%                        {<<In/bitstring, MK/bitstring, MV/bitstring>>, NS3}
+%                    end,
+%                    {<<"">>, S1}, M),
+%  {MapEnd, S3} = emit_map_end(S2),
+%  {<<MapStart/bitstring, Body/bitstring, MapEnd/bitstring>>, S3}.
+
+emit_map(M, S) ->
+  emit_array([?MAP_AS_ARR|flatten_map(M)], S).
 
 emit_array(A, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
-  {Body, S2} = maps:foldl(fun (E, {In, NS1}) ->
+  {Body, S2} = lists:foldl(fun (E, {In, NS1}) ->
                         {NE, NS2} = marshal(E, NS1),
-                        {In ++ NE, NS2}
+                        {<<In/bitstring, NE/bitstring>>, NS2}
                     end,
                     {<<"">>, S1}, A),
   {ArrayEnd, S3} = emit_array_end(S2),
-  {ArrayStart ++ Body ++ ArrayEnd, S3}.
+  {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
 
 emit_array_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
@@ -191,12 +217,10 @@ emit_array_end(S=#state{}) ->
 
 emit_map_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
-  S1 = push_level(S),
-  {<<Sep/bitstring, "{">>, push_level(S1)}.
+  {<<Sep/bitstring, "{">>, push_map(S1)}.
 
 emit_map_end(S=#state{}) ->
-  S1 = pop_level(S),
-  {<<"}">>, S1}.
+  {<<"}">>, pop_level(S)}.
 
 -spec escape(bitstring()) -> bitstring().
 escape(S) ->
@@ -230,6 +254,10 @@ pop_level(State=#state{started=S, is_key=K}) ->
   {_, K1} = queue:out_r(K),
   State#state{started=S1, is_key=K1}.
 
+-spec push_map(S) -> S when S :: #state{}.
+push_map(State=#state{started=S, is_key=K}) ->
+  State#state{started=queue:in(true, S), is_key=queue:in(true, K)}.
+
 -spec write_sep(S) -> {bitstring(), S} when S :: #state{}.
 write_sep(State=#state{started=S, is_key=K}) ->
   case queue:out_r(S) of
@@ -254,19 +282,34 @@ quote_string(Str) ->
   EscapeQuote = re:replace(EscapeSlash, "\\\"", "\\\""),
   <<"\"", EscapeQuote/bitstring, "\"">>.
 
+flatten_map(M) ->
+  maps:fold(fun(K, V, In) ->
+                [K, V| In]
+            end, [], M).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  %{ok, _} = start(),
+  {ok, _} = start(),
   {ok, _} = transit_rolling_cache:start_link(),
   ok.
 
-marshal_tagged_test_() ->
+stop_server(ok) ->
+  ok = stop(),
+  ok = transit_rolling_cache:stop(),
+  ok.
+
+%marshals_tagged_test_() ->
+%  {setup,
+%   fun start_server/0,
+%   fun stop_server/1,
+%   fun marshals_tagged/1}.
+
+marshals_extention_test_() ->
   {setup,
    fun start_server/0,
-   fun marshals_tagged/1}.
-
+   fun stop_server/1,
+   fun marshals_map/1}.
 
 marshals_tagged(ok) ->
   Started = queue:from_list([true]),
@@ -274,5 +317,11 @@ marshals_tagged(ok) ->
            {<<"[\"^0\",\"foo\"]">>, <<"foo">>},
            {<<"[\"^0\",1234]">>, 1234}],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, #state{started=Started}) end || {Res, Rep} <- Tests].
+
+marshals_array(ok) ->
+  ?_assertEqual(<<"[\"a\",2,\"~:a\"]">>, marshal_top(["a",2, a])).
+
+marshals_map(ok) ->
+  ?_assertEqual(<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, marshal_top(#{a => b, 3 => 4})).
 
 -endif.

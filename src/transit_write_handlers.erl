@@ -12,7 +12,7 @@ undefined_rep(_) ->
   undefined.
 
 undefined_string_rep(_) ->
-  undefined.
+  <<"null">>.
 
 %%% Integer handler
 integer_tag(_I) ->
@@ -22,23 +22,23 @@ integer_rep(I) ->
   I.
 
 integer_string_rep(I) ->
-  integer_to_list(I).
+  list_to_binary(integer_to_list(I)).
 
 %%% BigInt handler
 bigint_tag(_) ->
   ?BigInt.
 bigint_rep(N) ->
-  integer_to_list(N).
+  N.
 bigint_string_rep(N) ->
-  bigint_rep(N).
+  list_to_binary(integer_to_list(N)).
 
 %%% Float handler
 float_tag(_) ->
   ?Float.
 float_rep(F) ->
-  integer_to_list(F).
+  float_to_list(F).
 float_string_rep(F) ->
-  integer_to_list(F).
+  list_to_binary(float_to_list(F)).
 
 %%% String handler
 string_tag(_) ->
@@ -92,7 +92,7 @@ keyword_tag(_K) ->
 keyword_rep(K) ->
   atom_to_list(K).
 keyword_string_rep(K) ->
-  atom_to_list(K).
+  list_to_binary(atom_to_list(K)).
 
 %%% UUID handler
 uuid_tag(_U) ->
@@ -143,9 +143,15 @@ handler(_) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-int_test() ->
-  Int = 1234,
-  IntH = handler(Int),
-  ?assertEqual(<<"i">>, apply(IntH#write_handler.tag, [Int])).
+handler_test_() ->
+  Tests = [{?Int, 1234},
+           {?Map, #{}},
+           {?Keyword, hi},
+           {?Null, undefined}
+          ],
+  [fun() ->
+      IntH = handler(Int),
+      Tag = apply(IntH#write_handler.tag, [Int])
+  end || {Tag, Int} <- Tests].
 
 -endif.
