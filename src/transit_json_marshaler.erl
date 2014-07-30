@@ -31,7 +31,7 @@ start() ->
   gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
-  gen_server:cast(?MODULE, stop).
+  gen_server:call(?MODULE, stop).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -51,6 +51,9 @@ handle_call({marshal_top, Object}, _From, State=#state{}) ->
                          marshal(Object, State)
                     end,
   {reply, Ret, NewState};
+
+handle_call(stop, _From, State) ->
+  {stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -295,27 +298,25 @@ start_server() ->
   ok.
 
 stop_server(ok) ->
-  ok = stop(),
   ok = transit_rolling_cache:stop(),
+  ok = stop(),
   ok.
 
-%marshals_tagged_test_() ->
-%  {setup,
-%   fun start_server/0,
-%   fun stop_server/1,
-%   fun marshals_tagged/1}.
-
 marshals_extention_test_() ->
-  {setup,
+  {foreach,
    fun start_server/0,
    fun stop_server/1,
-   fun marshals_map/1}.
+   [fun marshals_tagged/1,
+    fun marshals_tagged/1,
+    fun marshals_array/1,
+    fun marshals_map/1
+   ]}.
 
 marshals_tagged(ok) ->
   Started = queue:from_list([true]),
   Tests = [{<<"[\"~#'\",\"foo\"]">>, "foo"},
-           {<<"[\"^0\",\"foo\"]">>, <<"foo">>},
-           {<<"[\"^0\",1234]">>, 1234}],
+           {<<"[\"~#'\",\"foo\"]">>, <<"foo">>},
+           {<<"[\"~#'\",1234]">>, 1234}],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, #state{started=Started}) end || {Res, Rep} <- Tests].
 
 marshals_array(ok) ->
