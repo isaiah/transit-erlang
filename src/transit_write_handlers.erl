@@ -48,6 +48,15 @@ string_rep(S) ->
 string_string_rep(S) ->
   S.
 
+%%% bitstring handler
+bitstring_tag(_) ->
+  ?String.
+bitstring_rep(S) ->
+  S.
+bitstring_string_rep(S) ->
+  S.
+
+
 %%% Boolean handler
 boolean_tag(_) ->
   ?Boolean.
@@ -56,9 +65,9 @@ boolean_rep(B) ->
 boolean_string_rep(B) ->
   case B of
     true ->
-      "t";
+      <<"t">>;
     false ->
-      "f"
+      <<"f">>
   end.
 
 %%% List handler
@@ -79,7 +88,7 @@ map_string_rep(_M) ->
 
 %%% Keyword handler
 keyword_tag(_K) ->
-  ":".
+  ?Keyword.
 keyword_rep(K) ->
   atom_to_list(K).
 keyword_string_rep(K) ->
@@ -87,7 +96,7 @@ keyword_string_rep(K) ->
 
 %%% UUID handler
 uuid_tag(_U) ->
-  "u".
+  ?UUID.
 uuid_rep(U) ->
   [U bsr 64, U band ?UUID_MASK].
 uuid_string_rep(U) ->
@@ -95,7 +104,7 @@ uuid_string_rep(U) ->
 
 %%% URI handler
 uri_tag(_U) ->
-  "r".
+  ?URI.
 uri_rep(U) ->
   U.
 uri_string_rep(U) ->
@@ -114,6 +123,8 @@ handler(Data) when is_list(Data) ->
     false ->
       #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1}
   end;
+handler(Data) when is_bitstring(Data) ->
+  #write_handler{tag = fun bitstring_tag/1, rep = fun bitstring_rep/1, string_rep = fun bitstring_string_rep/1};
 handler(Data) when is_map(Data) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_atom(Data) ->
@@ -135,6 +146,6 @@ handler(_) ->
 int_test() ->
   Int = 1234,
   IntH = handler(Int),
-  ?assertEqual("i", apply(IntH#write_handler.tag, [Int])).
+  ?assertEqual(<<"i">>, apply(IntH#write_handler.tag, [Int])).
 
 -endif.

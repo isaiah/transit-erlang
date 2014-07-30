@@ -78,15 +78,16 @@ terminate(_Rsn, _C) ->
   ok.
 
 
--spec is_cache_key(string()) -> boolean().
-is_cache_key(Name) when length(Name) > 0 ->
-  case lists:prefix(?SUB, Name) of
-    true ->
-      case lists:prefix(?MAP_AS_ARR, Name) of
-        true -> false;
-        false -> true
+-spec is_cache_key(bitstring()) -> boolean().
+is_cache_key(Name) when bit_size(Name) > 0 ->
+  <<Sub, Ext, _Tail/binary>> = Name,
+  case Sub of
+    $~ ->
+      case Ext of
+        32 -> false; %%% space
+        _ -> true
       end;
-    false -> false
+    _ -> false
   end;
 is_cache_key(_) ->
   false.
@@ -96,9 +97,12 @@ encode_key(Num) ->
   Lo = Num rem ?CACHE_CODE_DIGITS,
   Hi = Num div ?CACHE_CODE_DIGITS,
   if Hi =:= 0 ->
-       ?SUB ++ integer_to_list(Lo + ?FIRST_ORD);
+       Lbit = Lo + ?FIRST_ORD,
+       <<?SUB/bitstring, Lbit>>;
      true ->
-       ?SUB ++ integer_to_list(Hi + ?FIRST_ORD) ++ integer_to_list(Lo + ?FIRST_ORD)
+       Lbit = Lo + ?FIRST_ORD,
+       Hbit = Hi + ?FIRST_ORD,
+       <<?SUB/bitstring, Hbit, Lbit>>
   end.
 
 -spec decode_key(string()) -> integer().
@@ -110,17 +114,15 @@ decode_key(Str) ->
       (ord(lists:nth(3, Str)) - ?FIRST_ORD) + ?CACHE_CODE_DIGITS * (ord(lists:nth(2, Str)) - ?FIRST_ORD)
   end.
 
--spec is_cacheable(as_map_key, string()) -> true.
-is_cacheable(as_map_key, Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
+-spec is_cacheable(as_map_key, bitstring()) -> true.
+is_cacheable(as_map_key, Str) when bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
   true.
 
--spec is_cacheable(string()) -> boolean().
-is_cacheable(Str) when length(Str) >= ?MIN_SIZE_CACHEABLE ->
-  case string:substr(Str, 1, 2) of
-    "~#" -> true;
-    "~:" -> true;
-    "~$" -> true;
-    _ -> false
+-spec is_cacheable(bitstring()) -> boolean().
+is_cacheable(Str) when bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+  case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
+    nomatch -> false;
+    _ -> true
   end;
 is_cacheable(_) -> false.
 
@@ -141,9 +143,12 @@ encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-is_cache_key_test() ->
-  ?assert(is_cache_key("^123")),
-  ?assertNot(is_cache_key("^ 123")),
-  ?assertNot(is_cache_key("123")),
-  ?assertNot(is_cache_key("")).
+is_cache_key_test_() ->
+  ?_assert(is_cache_key(<<"^123">>)),
+  ?_assertNot(is_cache_key(<<"^ 123">>)),
+  ?_assertNot(is_cache_key(<<"123">>)),
+  ?_assertNot(is_cache_key(<<"">>)).
+
+is_cacheable_test() ->
+  ?assert(is_cacheable(<<"~#tag">>)).
 -endif.

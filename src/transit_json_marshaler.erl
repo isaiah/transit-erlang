@@ -69,14 +69,14 @@ code_change(_OldVsn, State, _Extra) ->
 marshal_top(Obj) ->
   gen_server:call(?MODULE, {marshal_top, Obj}).
 
--spec marshal(as_map_key, {binary(), any()}, S) -> {string(), S} when S :: #state{}.
+-spec marshal(as_map_key, {binary(), any()}, S) -> {bitstring(), S} when S :: #state{}.
 marshal(as_map_key, {?Null, _}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Null, "null");
 
 marshal(as_map_key, {?Boolean, Val}, _S=#state{}) ->
   emit_string(as_map_key, ?ESC, ?Boolean, Val).
 
--spec marshal(any(), S) -> {string(), S} when S :: #state{}.
+-spec marshal(any(), S) -> {bitstring(), S} when S :: #state{}.
 marshal(TaggedVal=#tagged_value{}, S=#state{}) ->
   emit_tagged(TaggedVal, S);
 
@@ -94,19 +94,21 @@ marshal(Rep, S=#state{}) ->
       emit_array(Rep, S);
     ?Map ->
       emit_map(Rep, S);
+    ?String when is_bitstring(Rep) ->
+      emit_string(<<"">>, Rep, S);
     ?String ->
-      emit_string("", Rep, S);
+      emit_string(<<"">>, list_to_binary(Rep), S);
     T ->
-      emit_encoded("", T, Rep, S)
+      emit_encoded(<<"">>, T, Rep, S)
   end.
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S=#state{}) ->
   {ArrayStart, S1} = emit_array_start(S),
-  EncodedTag = transit_rolling_cache:encode(?ESC ++ "#" ++ Tag),
+  EncodedTag = transit_rolling_cache:encode(<<?ESC/bitstring, "#", Tag/bitstring>>),
   {Tag1, S2} = emit_object(EncodedTag, S1),
   {Body, S3} =  marshal(Rep, S2),
   {ArrayEnd, S4} = emit_array_end(S3),
-  {ArrayStart ++ Tag1 ++ Body ++ ArrayEnd, S4}.
+  {<<ArrayStart/bitstring, Tag1/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S4}.
 
 emit_encoded(Prefix, Tag, Rep, S) when length(Tag) =:= 1 ->
   case io_lib:printable_list(Rep) of
@@ -121,14 +123,16 @@ emit_encoded(_Prefix, Tag, Rep, S) ->
   StrRep = RepFun(Rep),
   emit_tagged(#tagged_value{tag=Tag, rep=StrRep}, S).
 
--spec emit_string(as_map_key, string(), string(), S) -> {string(), S} when S :: #state{}.
+-spec emit_string(as_map_key, bitstring(), bitstring(), S) -> {bitstring(), S} when S :: #state{}.
 emit_string(as_map_key, Tag, String, S=#state{}) ->
-  Encoded = transit_rolling_cache:encode(as_map_key, Tag ++ escape(String)),
+  Escaped = escape(String),
+  Encoded = transit_rolling_cache:encode(as_map_key, <<Tag/bitstring, Escaped/bitstring>>),
   emit_object(Encoded, S).
 
--spec emit_string(string(), string(), string()) -> string().
+-spec emit_string(bitstring(), bitstring(), S) -> {bitstring(), S} when S :: #state{}.
 emit_string(Tag, String, S=#state{}) ->
-  Encoded = transit_rolling_cache:encode(Tag ++ escape(String)),
+  Escaped = escape(String),
+  Encoded = transit_rolling_cache:encode(<<Tag/bitstring, Escaped/bitstring>>),
   emit_object(Encoded, S).
 
 emit_object(Obj, S=#state{}) ->
@@ -136,15 +140,15 @@ emit_object(Obj, S=#state{}) ->
   Body = if is_bitstring(Obj) ->
               quote_string(Obj);
             is_integer(Obj) ->
-              integer_to_list(Obj);
+              list_to_binary(integer_to_list(Obj));
             is_float(Obj) ->
-              float_to_list(Obj);
+              list_to_binary(float_to_list(Obj));
             is_atom(Obj) ->
               case Obj of
                 undefined ->
                   quote_string("null");
                 _ ->
-                  atom_to_list(Obj)
+                  list_to_binary(atom_to_list(Obj))
               end;
             true ->
               case io_lib:printable_list(Obj) of
@@ -154,7 +158,7 @@ emit_object(Obj, S=#state{}) ->
                   erlang:throws("don't know how to encode object.")
               end
          end,
-  {Sep ++ Body, S1}.
+  {<<Sep/bitstring, Body/bitstring>>, S1}.
 
 emit_map(M, S=#state{}) ->
   {MapStart, S1} = emit_map_start(S),
@@ -163,7 +167,7 @@ emit_map(M, S=#state{}) ->
                         {MV, NS3} = marshal(V, NS2),
                         {In ++ MK ++ MV, NS3}
                     end,
-                    {"", S1}, M),
+                    {<<"">>, S1}, M),
   {MapEnd, S3} = emit_map_end(S2),
   {MapStart ++ Body ++ MapEnd, S3}.
 
@@ -173,41 +177,43 @@ emit_array(A, S=#state{}) ->
                         {NE, NS2} = marshal(E, NS1),
                         {In ++ NE, NS2}
                     end,
-                    {"", S1}, A),
+                    {<<"">>, S1}, A),
   {ArrayEnd, S3} = emit_array_end(S2),
   {ArrayStart ++ Body ++ ArrayEnd, S3}.
 
 emit_array_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
-  {Sep ++ "[", push_level(S1)}.
+  {<<Sep/bitstring, "[">>, push_level(S1)}.
 
 emit_array_end(S=#state{}) ->
   S1 = pop_level(S),
-  {"]", S1}.
+  {<<"]">>, S1}.
 
 emit_map_start(S=#state{}) ->
   {Sep, S1} = write_sep(S),
   S1 = push_level(S),
-  {Sep ++ "{", push_level(S1)}.
+  {<<Sep/bitstring, "{">>, push_level(S1)}.
 
 emit_map_end(S=#state{}) ->
   S1 = pop_level(S),
-  {"}", S1}.
+  {<<"}">>, S1}.
 
--spec escape(string()) -> string().
-escape(S) when S =:= ?MAP_AS_ARR ->
-  S;
+-spec escape(bitstring()) -> bitstring().
 escape(S) ->
-  case is_escapable(S) of
-    true ->
-      ?ESC ++ S;
-    false ->
-      S
+  if S =:= ?MAP_AS_ARR ->
+       S;
+     true ->
+       case is_escapable(S) of
+         true ->
+           <<?ESC/bitstring,S/bitstring>>;
+         false ->
+           S
+       end
   end.
 
 -spec is_escapable(string()) -> boolean().
 is_escapable(S) ->
-  case re:run(S, "^\\" ++ ?SUB ++ "|" ++ ?ESC ++ "|" ++ ?RES) of
+  case re:run(S, bitstring_to_list(<<"^\\", ?SUB/bitstring, "|", ?ESC/bitstring,"|",?RES/bitstring>>)) of
     {match, _} ->
       true;
     _ ->
@@ -224,29 +230,29 @@ pop_level(State=#state{started=S, is_key=K}) ->
   {_, K1} = queue:out_r(K),
   State#state{started=S1, is_key=K1}.
 
--spec write_sep(S) -> {string(), S} when S :: #state{}.
+-spec write_sep(S) -> {bitstring(), S} when S :: #state{}.
 write_sep(State=#state{started=S, is_key=K}) ->
   case queue:out_r(S) of
     {{value, true}, S1} ->
       S2 = queue:in(false, S1),
-      {"", State#state{started=S2}};
+      {<<"">>, State#state{started=S2}};
     _ ->
       case queue:out_r(K) of
         {{value, true}, K1} ->
           K2 = queue:in(false, K1),
-          {":", State#state{is_key=K2}};
+          {<<":">>, State#state{is_key=K2}};
         {{value, false}, K1} ->
           K2 = queue:in(true, K1),
-          {",", State#state{is_key=K2}};
+          {<<",">>, State#state{is_key=K2}};
         {empty, K} ->
-          {",", State}
+          {<<",">>, State}
       end
   end.
 
 quote_string(Str) ->
   EscapeSlash = re:replace(Str, "\\\\", "\\\\"),
   EscapeQuote = re:replace(EscapeSlash, "\\\"", "\\\""),
-  "\"" ++ EscapeQuote ++ "\"".
+  <<"\"", EscapeQuote/bitstring, "\"">>.
 
 
 -ifdef(TEST).
@@ -264,8 +270,9 @@ marshal_tagged_test_() ->
 
 marshals_tagged(ok) ->
   Started = queue:from_list([true]),
-  Tests = [{"[\"~#'\",\"foo\"]", "foo"},
-           {"[\"~#'\",1234]", 1234}],
+  Tests = [{<<"[\"~#'\",\"foo\"]">>, "foo"},
+           {<<"[\"^0\",\"foo\"]">>, <<"foo">>},
+           {<<"[\"^0\",1234]">>, 1234}],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, #state{started=Started}) end || {Res, Rep} <- Tests].
 
 -endif.
