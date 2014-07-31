@@ -1,6 +1,6 @@
 -module(transit_rolling_cache).
 -behavior(gen_server).
--export([encode/1, encode/2, decode/1]).
+-export([encode/2, decode/2]).
 -export([start_link/0, stop/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -include_lib("transit_format.hrl").
@@ -16,26 +16,23 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
-  gen_server:cast(?MODULE, stop).
+  gen_server:call(?MODULE, stop).
 
 init([]) ->
   {ok, #cache{}}.
 
-encode(Name) ->
-  gen_server:call(?MODULE, {encode, false, Name}).
+encode(Name, Env) ->
+  gen_server:call(?MODULE, {encode, Name, Env}).
 
-encode(as_map_key, Name) ->
-  gen_server:call(?MODULE, {encode, as_map_key, Name}).
+decode(Name, Env) ->
+  gen_server:call(?MODULE, {decode, Name, Env}).
 
-decode(Name) ->
-  gen_server:call(?MODULE, {decode, Name}).
-
-handle_call({encode, AsMapKey, Name}, _From, C=#cache{kv=Kv}) ->
+handle_call({encode, Name, Env}, _From, C=#cache{kv=Kv}) ->
   case dict:find(Name, Kv) of
     {ok, Val} ->
       {reply, Val, C};
     error ->
-      case is_cacheable(AsMapKey, Name) of
+      case is_cacheable(Name, Env) of
         true ->
           {Val, C1} = encache(Name, C),
           {reply, Val, C1};
@@ -68,11 +65,12 @@ handle_call({decode, AsMapKey, Name}, _From, C=#cache{kv=Kv}) ->
           {reply, Name, C}
       end
   end;
+handle_call(stop, _From, State) ->
+  {stop, normal, ok, State};
+
 handle_call(_Msg, _From, C) ->
   {reply, ok, C}.
 
-handle_cast(stop, State) ->
-  {stop, normal, State};
 handle_cast(_Msg, C) ->
   {noreply, C}.
 
@@ -84,7 +82,6 @@ code_change(_OldVsn, C, _Extra) ->
 
 terminate(_Rsn, _C) ->
   ok.
-
 
 -spec is_cache_key(bitstring()) -> boolean().
 is_cache_key(Name) when bit_size(Name) > 0 ->
@@ -122,20 +119,23 @@ decode_key(Str) ->
       (ord(lists:nth(3, Str)) - ?FIRST_ORD) + ?CACHE_CODE_DIGITS * (ord(lists:nth(2, Str)) - ?FIRST_ORD)
   end.
 
--spec is_cacheable(atom(), bitstring()) -> boolean().
-is_cacheable(as_map_key, Str) ->
-  if bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
-       true;
-     true ->
-       false
-  end;
-
-is_cacheable(_, Str) when bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
-  case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
-    nomatch -> false;
-    _ -> true
-  end;
-is_cacheable(_, _) -> false.
+-spec is_cacheable(bitstring(), transit_marshaler:env()) -> boolean().
+is_cacheable(Str, Env) ->
+  case transit_marshaler:as_map_key(Env) of
+    true ->
+      if bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+           true;
+         true ->
+           false
+      end;
+    false when bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+      case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
+        nomatch -> false;
+        _ -> true
+      end;
+    _ ->
+      false
+  end.
 
 -spec ord(char()) -> integer().
 ord(Char) ->
@@ -161,5 +161,6 @@ is_cache_key_test_() ->
   ?_assertNot(is_cache_key(<<"">>)).
 
 is_cacheable_test() ->
-  ?assert(is_cacheable(false, <<"~#tag">>)).
+  Env = transit_marshaler:new_env(),
+  ?assert(is_cacheable(<<"~#tag">>, Env)).
 -endif.

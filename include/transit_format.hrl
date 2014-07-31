@@ -32,3 +32,5 @@
 -record(tagged_value, {tag :: bitstring(),
                        rep :: bitstring(),
                        string_rep = undefined :: bitstring() | atom()}).
+
+-type tagged_value() :: #tagged_value{}.
