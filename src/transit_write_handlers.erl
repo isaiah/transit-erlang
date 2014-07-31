@@ -134,8 +134,8 @@ handler(Data) when is_atom(Data) ->
     _ ->
       #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
   end;
-handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep, string_rep=Str}) ->
-  #write_handler{tag=fun (_) -> Tag end, rep=fun (_) -> Rep end, string_rep = fun (_) -> Str end};
+handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
+  #write_handler{tag=fun (_) -> Tag end, rep=fun (_) -> Rep end, string_rep = fun (_) -> list_to_binary(Rep) end};
 
 handler(_) ->
   #write_handler{}.

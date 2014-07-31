@@ -27,10 +27,9 @@
 
 -record(write_handler, {tag :: fun((any()) -> string()),
                         rep :: fun((any()) -> string()),
-                        string_rep :: fun((any()) -> string())}).
+                        string_rep :: fun((any()) -> bitstring())}).
 
 -record(tagged_value, {tag :: bitstring(),
-                       rep :: bitstring(),
-                       string_rep = undefined :: bitstring() | atom()}).
+                       rep :: any()}).
 
 -type tagged_value() :: #tagged_value{}.

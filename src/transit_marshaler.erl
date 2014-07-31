@@ -9,7 +9,7 @@
 -export_type([env/0]).
 
 -export([write_sep/1, emit_array_start/1, emit_array_end/1, emit_map_start/1, emit_map_end/1]).
--export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1]).
+-export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
 -export([marshal_top/3, marshal/3, new_env/0]).
 
 -callback emit_null(Rep, Env) ->
@@ -33,20 +33,20 @@
     when Rep::tagged_value(), Resp::bitstring(), Env::env().
 
 -callback emit_object(Rep, Env) ->
-  {Rep, Env}
-    when Rep::bitstring(), Env::env().
+  {Resp, Env}
+    when Rep::term(), Resp::bitstring(), Env::env().
 
 -callback emit_encoded(Tag, Rep, Env) ->
   {Rep, Env}
     when Tag::bitstring(), Rep::bitstring(), Env::env().
 
 -callback emit_array(Rep, Env) ->
-  {Rep, Env}
-    when Rep::bitstring(), Env::env().
+  {Resp, Env}
+    when Rep::term(), Resp::bitstring(), Env::env().
 
 -callback emit_map(Rep, Env) ->
   {Rep, Env}
-    when Rep::bitstring(), Env::env().
+    when Rep::term(), Env::env().
 
 -callback emit_string(Tag, Rep, Env) ->
   {Rep, Env}
@@ -143,6 +143,9 @@ is_escapable(S) ->
 -spec as_map_key(env()) -> boolean().
 as_map_key(Env) ->
   Env#env.as_map_key.
+
+force_as_map_key(AsMapKey, Env) ->
+  Env#env{as_map_key=AsMapKey}.
 
 marshal_top(M, Object, Env) ->
   Handler = transit_write_handlers:handler(Object),

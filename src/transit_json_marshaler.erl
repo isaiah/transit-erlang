@@ -3,8 +3,8 @@
 
 -include_lib("transit_format.hrl").
 
--export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2, emit_string/3, emit_object/2, emit_tagged/2,
-         emit_encoded/3, emit_array/2, emit_map/2]).
+-export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2, emit_string/3,
+         emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2]).
 
 emit_null(_Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
@@ -48,6 +48,8 @@ emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
   {ArrayEnd, S4} = transit_marshaler:emit_array_end(S3),
   {<<ArrayStart/bitstring, Tag1/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S4}.
 
+-spec emit_encoded(Tag, Rep, Env) ->
+  {Rep, Env} when Tag::bitstring(), Rep::bitstring(), Env::transit_marshaler:env().
 emit_encoded(Tag, Rep, Env) ->
   Handler = transit_write_handlers:handler(Rep),
   RepFun = Handler#write_handler.string_rep,
@@ -73,7 +75,7 @@ emit_object(Obj, S) ->
               list_to_binary(float_to_list(Obj));
             is_atom(Obj) ->
               case Obj of
-                "null" ->
+                undefined ->
                   transit_marshaler:quote_string("null");
                 _ ->
                   list_to_binary(atom_to_list(Obj))
@@ -83,7 +85,7 @@ emit_object(Obj, S) ->
                 true ->
                   transit_marshaler:quote_string(Obj);
                 false ->
-                  erlang:throws("don't know how to encode object.")
+                  erlang:throw("don't know how to encode object.")
               end
          end,
   {<<Sep/bitstring, Body/bitstring>>, S1}.
@@ -129,6 +131,8 @@ marshals_tagged(ok) ->
 marshals_extend(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
-           {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}}],
+           {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
+           {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}}
+          ],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
 -endif.

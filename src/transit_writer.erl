@@ -38,11 +38,17 @@ stop() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([]) ->
+init([Format]) ->
   transit_rolling_cache:start_link(),
   ets:new(?TRANSIT_HANDLERS, [set, named_table]),
   Env = transit_marshaler:new_env(),
-  {ok, #state{marshaler=transit_json_marshaler, env=Env}}.
+  Marshaler = case Format of
+                json_verbose ->
+                  transit_json_verbose_marshaler;
+                _ ->
+                  transit_json_marshaler
+              end,
+  {ok, #state{marshaler=Marshaler, env=Env}}.
 
 handle_call({write, Object}, _From, State=#state{marshaler=M, env=Env}) ->
   {Rep, NEnv} = transit_marshaler:marshal_top(M, Object, Env),

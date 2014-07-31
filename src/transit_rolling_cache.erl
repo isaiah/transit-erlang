@@ -41,14 +41,14 @@ handle_call({encode, Name, Env}, _From, C=#cache{kv=Kv}) ->
       end
   end;
 
-handle_call({decode, AsMapKey, Name}, _From, C=#cache{kv=Kv}) ->
+handle_call({decode, Name, Env}, _From, C=#cache{kv=Kv}) ->
   case is_cache_key(Name) of
     true ->
       case dict:find(Name, Kv) of
         {ok, Val} ->
           {reply, Val, C};
         _ ->
-          case is_cacheable(AsMapKey, Name) of
+          case is_cacheable(Name, Env) of
             true ->
               {Val, C1} = encache(Name, C),
               {reply, Val, C1};
@@ -57,7 +57,7 @@ handle_call({decode, AsMapKey, Name}, _From, C=#cache{kv=Kv}) ->
           end
       end;
     false ->
-      case is_cacheable(AsMapKey, Name) of
+      case is_cacheable(Name, Env) of
         true ->
           {Val, C2} = encache(Name, C),
           {reply, Val, C2};
@@ -97,7 +97,7 @@ is_cache_key(Name) when bit_size(Name) > 0 ->
 is_cache_key(_) ->
   false.
 
--spec encode_key(integer()) -> string().
+-spec encode_key(integer()) -> bitstring().
 encode_key(Num) ->
   Lo = Num rem ?CACHE_CODE_DIGITS,
   Hi = Num div ?CACHE_CODE_DIGITS,
