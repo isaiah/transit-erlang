@@ -21,18 +21,20 @@ stop() ->
 init([]) ->
   {ok, #cache{}}.
 
-encode(Name, Env) ->
-  gen_server:call(?MODULE, {encode, Name, Env}).
+-spec encode(Name, boolean()) -> Name when Name::bitstring().
+encode(Name, AsMapKey) ->
+  gen_server:call(?MODULE, {encode, Name, AsMapKey}).
 
-decode(Name, Env) ->
-  gen_server:call(?MODULE, {decode, Name, Env}).
+-spec decode(Name, boolean()) -> Name when Name::bitstring().
+decode(Name, AsMapKey) ->
+  gen_server:call(?MODULE, {decode, Name, AsMapKey}).
 
-handle_call({encode, Name, Env}, _From, C=#cache{kv=Kv}) ->
+handle_call({encode, Name, AsMapKey}, _From, C=#cache{kv=Kv}) ->
   case dict:find(Name, Kv) of
     {ok, Val} ->
       {reply, Val, C};
     error ->
-      case is_cacheable(Name, Env) of
+      case is_cacheable(Name, AsMapKey) of
         true ->
           {Val, C1} = encache(Name, C),
           {reply, Val, C1};
@@ -41,14 +43,14 @@ handle_call({encode, Name, Env}, _From, C=#cache{kv=Kv}) ->
       end
   end;
 
-handle_call({decode, Name, Env}, _From, C=#cache{kv=Kv}) ->
+handle_call({decode, Name, AsMapKey}, _From, C=#cache{kv=Kv}) ->
   case is_cache_key(Name) of
     true ->
       case dict:find(Name, Kv) of
         {ok, Val} ->
           {reply, Val, C};
         _ ->
-          case is_cacheable(Name, Env) of
+          case is_cacheable(Name, AsMapKey) of
             true ->
               {Val, C1} = encache(Name, C),
               {reply, Val, C1};
@@ -57,7 +59,7 @@ handle_call({decode, Name, Env}, _From, C=#cache{kv=Kv}) ->
           end
       end;
     false ->
-      case is_cacheable(Name, Env) of
+      case is_cacheable(Name, AsMapKey) of
         true ->
           {Val, C2} = encache(Name, C),
           {reply, Val, C2};
@@ -110,37 +112,36 @@ encode_key(Num) ->
        <<?SUB/bitstring, Hbit, Lbit>>
   end.
 
--spec decode_key(string()) -> integer().
-decode_key(Str) ->
-  case string:len(Str) of
-    2 ->
-      ord(lists:nth(2, Str)) - ?FIRST_ORD;
-    _ ->
-      (ord(lists:nth(3, Str)) - ?FIRST_ORD) + ?CACHE_CODE_DIGITS * (ord(lists:nth(2, Str)) - ?FIRST_ORD)
+%-spec decode_key(string()) -> integer().
+%decode_key(Str) ->
+%  case string:len(Str) of
+%    2 ->
+%      ord(lists:nth(2, Str)) - ?FIRST_ORD;
+%    _ ->
+%      (ord(lists:nth(3, Str)) - ?FIRST_ORD) + ?CACHE_CODE_DIGITS * (ord(lists:nth(2, Str)) - ?FIRST_ORD)
+%  end.
+
+-spec is_cacheable(bitstring(), boolean()) -> boolean().
+is_cacheable(Str, true) ->
+  if bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+       true;
+     true ->
+       false
+  end;
+is_cacheable(Str, false) ->
+  if bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+       case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
+         nomatch -> false;
+         _ -> true
+       end;
+     true ->
+       false
   end.
 
--spec is_cacheable(bitstring(), transit_marshaler:env()) -> boolean().
-is_cacheable(Str, Env) ->
-  case transit_marshaler:as_map_key(Env) of
-    true ->
-      if bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
-           true;
-         true ->
-           false
-      end;
-    false when bit_size(Str) >= ?MIN_SIZE_CACHEABLE ->
-      case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
-        nomatch -> false;
-        _ -> true
-      end;
-    _ ->
-      false
-  end.
-
--spec ord(char()) -> integer().
-ord(Char) ->
-  [Int] = io_lib_format:fwrite("~w", Char),
-  Int.
+%-spec ord(char()) -> integer().
+%ord(Char) ->
+%  [Int] = io_lib_format:fwrite("~w", Char),
+%  Int.
 
 encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
   case dict:find(Name, Vk) of
@@ -161,6 +162,5 @@ is_cache_key_test_() ->
   ?_assertNot(is_cache_key(<<"">>)).
 
 is_cacheable_test() ->
-  Env = transit_marshaler:new_env(),
-  ?assert(is_cacheable(<<"~#tag">>, Env)).
+  ?assert(is_cacheable(<<"~#tag">>, false)).
 -endif.

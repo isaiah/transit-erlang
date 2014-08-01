@@ -1,5 +1,5 @@
 -module(transit_write_handlers).
--compile(export_all).
+-export([handler/1]).
 -include_lib("transit_format.hrl").
 
 -define(UUID_MASK, math:pow(2, 64) - 1).

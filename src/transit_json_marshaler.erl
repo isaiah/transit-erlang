@@ -42,7 +42,7 @@ emit_float(Rep, Env) ->
   {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
   {ArrayStart, S1} = transit_marshaler:emit_array_start(Env),
-  EncodedTag = transit_rolling_cache:encode(<<?ESC/bitstring, "#", Tag/bitstring>>, S1),
+  EncodedTag = transit_rolling_cache:encode(<<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S1)),
   {Tag1, S2} = emit_object(EncodedTag, S1),
   {Body, S3} =  transit_marshaler:marshal(?MODULE, Rep, S2),
   {ArrayEnd, S4} = transit_marshaler:emit_array_end(S3),
@@ -60,7 +60,7 @@ emit_encoded(Tag, Rep, Env) ->
   {bitstring(), S} when S::transit_marshaler:env().
 emit_string(Tag, String, Env) ->
   Escaped = transit_marshaler:escape(String),
-  Encoded = transit_rolling_cache:encode(<<Tag/bitstring, Escaped/bitstring>>, Env),
+  Encoded = transit_rolling_cache:encode(<<Tag/bitstring, Escaped/bitstring>>, transit_marshaler:as_map_key(Env)),
   emit_object(Encoded, Env).
 
 -spec emit_object(Rep, Env) ->

@@ -45,8 +45,12 @@ init([Format]) ->
   Marshaler = case Format of
                 json_verbose ->
                   transit_json_verbose_marshaler;
+                json ->
+                  transit_json_marshaler;
+                msgpack ->
+                  transit_msgpack_marshaler;
                 _ ->
-                  transit_json_marshaler
+                  erlang:throw("unsupported marshaler: ~s", [Format])
               end,
   {ok, #state{marshaler=Marshaler, env=Env}}.
 
