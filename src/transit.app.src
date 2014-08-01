@@ -1,7 +1,7 @@
 {application, transit,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "transit-format library for erlang."},
+  {vsn, "0.8.1"},
   {registered, []},
   {applications, [
                   kernel,
