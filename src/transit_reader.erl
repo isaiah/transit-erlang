@@ -36,8 +36,7 @@ read(Name) ->
 
 init([]) ->
   transit_rolling_cache:start_link(),
-  AsMapKey = #state{},
-  {ok, AsMapKey}.
+  {ok, false}.
 
 handle_call({read, Name}, _From, AsMapKey) ->
   Val = decode(Name, false),
@@ -66,36 +65,38 @@ decode(Name, AsMapKey) when is_list(Name) ->
   case Name of
     [?MAP_AS_ARR|Tail] ->
       decode_array_hash(Tail, AsMapKey);
-    [[?ESC, "#"|Tag], Rep] ->
+    [{_, _}|_] -> 
+      decode_hash(Name, AsMapKey);
+    [EscapedTag, Rep] ->
+      [?ESC, "#"|Tag] = EscapedTag,
       decode_tag(Tag, Rep, AsMapKey);
     _ ->
       decode_array(Name, AsMapKey)
   end;
-decode(Name, AsMapKey) ->
-  decode_hash(Name, AsMapKey).
+decode(Name, _AsMapKey) ->
+  Name.
 
-decode_string(String, AsMapKey=#state{env=Env}) ->
-  parse_string(transit_rolling_cache:decode(String, transit_marshaler:as_map_key(Env)), AsMapKey).
+decode_string(String, AsMapKey) ->
+  parse_string(transit_rolling_cache:decode(String, AsMapKey), AsMapKey).
 
-parse_string(String, AsMapKey=#state{}) ->
-  Val = case String of
-          [?ESC,Tag|Rep] ->
-            case transit_read_handlers:handler(Tag) of
-              F when is_function(F) ->
-                F(Rep);
-              _ ->
-                if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
-                     [Tag|Rep];
-                   Tag =:= "#" ->
-                     Rep;
-                   true ->
-                     #tagged_value{tag=Tag, rep=Rep}
-                end
-            end;
-          _ ->
-            String
-        end,
-  {Val, AsMapKey}.
+parse_string(String, _AsMapKey) ->
+  case String of
+    [?ESC,Tag|Rep] ->
+      case transit_read_handlers:handler(Tag) of
+        F when is_function(F) ->
+          F(Rep);
+        _ ->
+          if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
+               [Tag|Rep];
+             Tag =:= "#" ->
+               Rep;
+             true ->
+               #tagged_value{tag=Tag, rep=Rep}
+          end
+      end;
+    _ ->
+      String
+  end.
 
 decode_array_hash(Name, AsMapKey) ->
   [{decode(Key, true), decode(Val, AsMapKey)} || {Key, Val} <- Name].
@@ -103,9 +104,9 @@ decode_array_hash(Name, AsMapKey) ->
 decode_array(Name, AsMapKey) ->
   [decode(El, AsMapKey) || El <- Name].
 
-decode_tag(Tag, Rep, AsMapKey) ->
+decode_tag(Tag, Rep, _AsMapKey) ->
   F = transit_read_handler:handler(Tag),
-  {F(Rep), AsMapKey}.
+  F(Rep).
 
 decode_hash(Name, AsMapKey) when length(Name) =:= 1 ->
   [{decode(Key, AsMapKey), decode(Val, AsMapKey)} || {Key, Val} <- Name];
@@ -117,9 +118,8 @@ decode_hash(Name, AsMapKey) ->
       {Rep, _} = decode(Val, AsMapKey),
       {Key, Rep};
     _ ->
-      erlang:throw("unkown hash format")
+      erlang:throw({"unkown hash format: ", Name})
   end.
-
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -140,5 +140,5 @@ unmarshal_test_() ->
 unmarshal_quoted(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{1, <<"[\"~#'\", 1]">>}],
-  [fun() -> {Val, _} = decode(jsx:decode(Str), #state{env=Env}) end || {Val, Str} <- Tests].
+  [fun() -> {Val, _} = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
 -endif.
