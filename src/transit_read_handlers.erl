@@ -24,6 +24,10 @@ handler(?QUOTE) ->
         _ ->
           Rep
       end
+  end;
+handler(?Set) ->
+  fun(Rep) ->
+      sets:from_list(Rep)
   end.
 
 -ifdef(TEST).
