@@ -4,14 +4,11 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {env::transit_marshaler:env(),
-                unmarshaler=transit_json_unmarshaler}).
-
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, read/1]).
+-export([start_link/0, start/0, read/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -26,6 +23,9 @@
 
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+start() ->
+  gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
 read(Name) ->
   gen_server:call(?MODULE, {read, jsx:decode(Name)}).
