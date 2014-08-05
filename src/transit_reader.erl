@@ -68,7 +68,7 @@ decode(Name, AsMapKey) when is_list(Name) ->
     [{_, _}|_] -> 
       decode_hash(Name, AsMapKey);
     [EscapedTag, Rep] ->
-      [?ESC, "#"|Tag] = EscapedTag,
+      <<"~", "#", Tag/binary>> = EscapedTag,
       decode_tag(Tag, Rep, AsMapKey);
     _ ->
       decode_array(Name, AsMapKey)
@@ -105,7 +105,7 @@ decode_array(Name, AsMapKey) ->
   [decode(El, AsMapKey) || El <- Name].
 
 decode_tag(Tag, Rep, _AsMapKey) ->
-  F = transit_read_handler:handler(Tag),
+  F = transit_read_handlers:handler(Tag),
   F(Rep).
 
 decode_hash(Name, AsMapKey) when length(Name) =:= 1 ->
@@ -135,10 +135,12 @@ unmarshal_test_() ->
   {foreach,
    fun start/0,
    fun stop/1,
-   []}.
+   [fun unmarshal_quoted/1]}.
 
 unmarshal_quoted(ok) ->
   Env = transit_marshaler:new_env(),
-  Tests = [{1, <<"[\"~#'\", 1]">>}],
-  [fun() -> {Val, _} = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
+  Tests = [{1, <<"[\"~#'\", 1]">>},
+           {<<"foo">>, <<"[\"~#'\", \"foo\"]">>}
+          ],
+  [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
 -endif.
