@@ -40,6 +40,7 @@ emit_float(Rep, Env) ->
 
 -spec emit_tagged(Rep, Env) ->
   {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
+
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
   {ArrayStart, S1} = transit_marshaler:emit_array_start(Env),
   EncodedTag = transit_rolling_cache:encode(<<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S1)),
@@ -50,9 +51,10 @@ emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
 
 -spec emit_encoded(Tag, Rep, Env) ->
   {Rep, Env} when Tag::bitstring(), Rep::bitstring(), Env::transit_marshaler:env().
+
 emit_encoded(Tag, Rep, Env) ->
   Handler = transit_write_handlers:handler(Rep),
-  RepFun = Handler#write_handler.string_rep,
+  RepFun = Handler#write_handler.rep,
   StrRep = RepFun(Rep),
   emit_tagged(#tagged_value{tag=Tag, rep=StrRep}, Env).
 
@@ -133,7 +135,8 @@ marshals_extend(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
-           {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}}
+           {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
+           {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
 -endif.

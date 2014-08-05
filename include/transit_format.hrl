@@ -22,6 +22,7 @@
 -define(URI, <<"r">>).
 -define(Array, <<"array">>).
 -define(Map, <<"map">>).
+-define(Set, <<"set">>).
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 

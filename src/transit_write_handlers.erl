@@ -110,6 +110,14 @@ uri_rep(U) ->
 uri_string_rep(U) ->
   U.
 
+%%% Set handler
+set_tag(_Set) ->
+  ?Set.
+set_rep(U) ->
+  #tagged_value{tag=?Array, rep=sets:to_list(U)}.
+set_string_rep(_) ->
+  undefined.
+
 handler(Data) when is_boolean(Data) ->
   #write_handler{tag = fun boolean_tag/1, rep = fun boolean_rep/1, string_rep = fun boolean_string_rep/1};
 handler(Data) when is_float(Data) ->
@@ -135,11 +143,16 @@ handler(Data) when is_atom(Data) ->
       #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
   end;
 handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
-  #write_handler{tag=fun (_) -> Tag end, rep=fun (_) -> Rep end, string_rep = fun (_) -> list_to_binary(Rep) end};
-
-handler(_) ->
-  #write_handler{}.
-
+  #write_handler{tag=fun(_) -> Tag end, rep=fun(_) -> Rep end, string_rep = fun(_) -> list_to_binary(Rep) end};
+handler(Data) ->
+  case transit_utils:is_set(Data) of
+    undefined ->
+      #write_handler{};
+    Set ->
+      #write_handler{tag=fun(_) -> ?Set end,
+                     rep=fun(Rep) -> #tagged_value{tag=?Array, rep=Set:to_list(Rep)} end,
+                     string_rep=fun(_) -> undefined end}
+  end.
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 

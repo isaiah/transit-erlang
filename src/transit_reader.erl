@@ -141,7 +141,8 @@ unmarshal_quoted(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{1, <<"[\"~#'\", 1]">>},
            {<<"foo">>, <<"[\"~#'\", \"foo\"]">>},
-           {undefined, <<"[\"~#'\", null]">>}
+           {undefined, <<"[\"~#'\", null]">>},
+           {sets:from_list(["foo", "bar", "baz"]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>}
           ],
   [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
 -endif.
