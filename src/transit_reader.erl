@@ -142,6 +142,8 @@ unmarshal_quoted(ok) ->
   Tests = [{1, <<"[\"~#'\", 1]">>},
            {<<"foo">>, <<"[\"~#'\", \"foo\"]">>},
            {undefined, <<"[\"~#'\", null]">>},
+           {true, <<"[\"~#'\", true]">>},
+           {false, <<"[\"~#'\", false]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>}
           ],
   [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].

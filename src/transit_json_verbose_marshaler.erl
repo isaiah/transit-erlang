@@ -83,6 +83,7 @@ marshals_tagged(ok) ->
 marshals_extend(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
-           {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}}],
+           {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
+           {<<"{\"~f3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
 -endif.

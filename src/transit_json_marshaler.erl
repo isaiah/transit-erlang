@@ -72,9 +72,9 @@ emit_object(Obj, S) ->
   Body = if is_bitstring(Obj) ->
               transit_marshaler:quote_string(Obj);
             is_integer(Obj) ->
-              list_to_binary(integer_to_list(Obj));
+              integer_to_binary(Obj);
             is_float(Obj) ->
-              list_to_binary(float_to_list(Obj));
+              float_to_binary(Obj, [{decimals, 4},compact]);
             is_atom(Obj) ->
               case Obj of
                 undefined ->
@@ -128,7 +128,11 @@ marshals_tagged(ok) ->
   Tests = [{<<"[\"~#'\",\"foo\"]">>, "foo"},
            {<<"[\"~#'\",\"foo\"]">>, <<"foo">>},
            {<<"[\"~#'\",null]">>, undefined},
-           {<<"[\"~#'\",1234]">>, 1234}],
+           {<<"[\"~#'\",1234]">>, 1234},
+           {<<"[\"~#'\",true]">>, true},
+           {<<"[\"~#'\",false]">>, false},
+           {<<"[\"~#'\",2.5]">>, 2.5}
+          ],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
 
 marshals_extend(ok) ->
@@ -136,6 +140,7 @@ marshals_extend(ok) ->
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
            {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
+           {<<"[\"~:atom-1\"]">>, ['atom-1']},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].

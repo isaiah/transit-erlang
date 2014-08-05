@@ -36,9 +36,9 @@ bigint_string_rep(N) ->
 float_tag(_) ->
   ?Float.
 float_rep(F) ->
-  float_to_list(F).
+  F.
 float_string_rep(F) ->
-  list_to_binary(float_to_list(F)).
+  float_to_binary(F, [{decimals, 4},compact]).
 
 %%% String handler
 string_tag(_) ->
