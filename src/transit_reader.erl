@@ -81,7 +81,7 @@ decode_string(String, AsMapKey) ->
 
 parse_string(String, _AsMapKey) ->
   case String of
-    [?ESC,Tag|Rep] ->
+    <<"~",Tag:8/binary-unit:1, Rep/binary>> ->
       case transit_read_handlers:handler(Tag) of
         F when is_function(F) ->
           F(Rep);
@@ -109,17 +109,21 @@ decode_tag(Tag, Rep, _AsMapKey) ->
   F(Rep).
 
 decode_hash(Name, AsMapKey) when length(Name) =:= 1 ->
-  [{decode(Key, AsMapKey), decode(Val, AsMapKey)} || {Key, Val} <- Name];
-decode_hash(Name, AsMapKey) ->
   case Name of
-    {[?ESC, "#"|Tag], Val} ->
-      decode_tag(Tag, Val, AsMapKey);
-    {Key, Val} ->
-      {Rep, _} = decode(Val, AsMapKey),
-      {Key, Rep};
+    [{Key, Val}] ->
+      case decode(Key, AsMapKey) of
+        #tagged_value{tag=Tag} ->
+          DecodedVal = decode(Val, AsMapKey),
+          decode_tag(Tag, DecodedVal, AsMapKey);
+        DecodedKey ->
+          Rep = decode(Val, false),
+          [{DecodedKey, Rep}]
+      end;
     _ ->
       erlang:throw({"unkown hash format: ", Name})
-  end.
+  end;
+decode_hash(Name, AsMapKey) ->
+  [{decode(Key, AsMapKey), decode(Val, AsMapKey)} || {Key, Val} <- Name].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -144,7 +148,12 @@ unmarshal_quoted(ok) ->
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
-           {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>}
+           {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
+           {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
+           {[{foo, <<"bar">>}], <<"{\"~:foo\":\"bar\"}">>}
           ],
   [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
+
+parse_string_test() ->
+  ?assertEqual(foo, parse_string(<<"~:foo">>, false)).
 -endif.

@@ -28,6 +28,14 @@ handler(?QUOTE) ->
 handler(?Set) ->
   fun(Rep) ->
       sets:from_list(Rep)
+  end;
+handler(?Keyword) ->
+  fun(Rep) ->
+      binary_to_atom(Rep, utf8)
+  end;
+handler(_) ->
+  fun(Rep) ->
+      Rep
   end.
 
 -ifdef(TEST).
