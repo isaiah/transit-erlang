@@ -76,7 +76,7 @@ emit_object(Obj, S) ->
             is_atom(Obj) ->
               case Obj of
                 undefined ->
-                  transit_marshaler:quote_string("null");
+                  <<"null">>;
                 _ ->
                   list_to_binary(atom_to_list(Obj))
               end;
@@ -125,6 +125,7 @@ marshals_tagged(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{<<"[\"~#'\",\"foo\"]">>, "foo"},
            {<<"[\"~#'\",\"foo\"]">>, <<"foo">>},
+           {<<"[\"~#'\",null]">>, undefined},
            {<<"[\"~#'\",1234]">>, 1234}],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
 
