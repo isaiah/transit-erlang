@@ -123,18 +123,18 @@ decode_hash(Name, AsMapKey) ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-start() ->
+start_server() ->
   transit_rolling_cache:start_link(),
   ok.
 
-stop(ok) ->
+stop_server(ok) ->
   ok = transit_rolling_cache:stop(),
   ok.
 
 unmarshal_test_() ->
   {foreach,
-   fun start/0,
-   fun stop/1,
+   fun start_server/0,
+   fun stop_server/1,
    [fun unmarshal_quoted/1]}.
 
 unmarshal_quoted(ok) ->
