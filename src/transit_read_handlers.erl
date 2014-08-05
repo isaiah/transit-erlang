@@ -17,7 +17,14 @@ handler(?Int) ->
 handler(?Float) ->
   list_to_float;
 handler(?QUOTE) ->
-  fun(Rep) -> Rep end.
+  fun(Rep) ->
+      case Rep of
+        null ->
+          undefined;
+        _ ->
+          Rep
+      end
+  end.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
