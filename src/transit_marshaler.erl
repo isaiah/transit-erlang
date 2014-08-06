@@ -52,10 +52,16 @@
   {Rep, Env}
     when Tag::bitstring(), Rep::bitstring(), Env::env().
 
-flatten_map(M) ->
+%%% flatten R17 map
+flatten_map(M) when is_map(M) ->
   maps:fold(fun(K, V, In) ->
                 [K, V| In]
-            end, [], M).
+            end, [], M);
+%%% flatten proplists style map
+flatten_map([{K,V}|Tail]) ->
+  [K,V|flatten_map(Tail)];
+flatten_map([]) ->
+  [].
 
 -spec emit_array_start(Env) ->
   {ArrayStart, Env} when ArrayStart::bitstring(), Env::env().

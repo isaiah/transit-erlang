@@ -118,6 +118,8 @@ set_rep(U) ->
 set_string_rep(_) ->
   undefined.
 
+handler([{_,_},_]) ->
+  #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_boolean(Data) ->
   #write_handler{tag = fun boolean_tag/1, rep = fun boolean_rep/1, string_rep = fun boolean_string_rep/1};
 handler(Data) when is_float(Data) ->
