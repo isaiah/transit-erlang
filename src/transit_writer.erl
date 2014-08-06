@@ -11,8 +11,13 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, start/0, stop/0]).
+-export([start_link/0, start_link/1, start/0, start/1, start/2, stop/0]).
 -export([write/1]).
+-ifdef(TEST).
+-export([handler/1]).
+-record(point, {x,y}).
+-endif.
+
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -25,11 +30,18 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
+start_link(Format) ->
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [Format, ?MODULE], []).
 start_link() ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  start_link(json).
 
+start(Format, CustomHandler) ->
+  gen_server:start({local, ?MODULE}, ?MODULE, [Format, CustomHandler], []).
+start(Format) ->
+  gen_server:start({local, ?MODULE}, ?MODULE, [Format, ?MODULE], []).
 start() ->
-  gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+  start(json).
+
 
 stop() ->
   gen_server:call(?MODULE, stop).
@@ -38,10 +50,9 @@ stop() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([Format]) ->
+init([Format, CustomHandler]) ->
   transit_rolling_cache:start_link(),
-  ets:new(?TRANSIT_HANDLERS, [set, named_table]),
-  Env = transit_marshaler:new_env(),
+  Env = transit_marshaler:new_env(CustomHandler),
   Marshaler = case Format of
                 json_verbose ->
                   transit_json_verbose_marshaler;
@@ -57,10 +68,6 @@ init([Format]) ->
 handle_call({write, Object}, _From, State=#state{marshaler=M, env=Env}) ->
   {Rep, NEnv} = transit_marshaler:marshal_top(M, Object, Env),
   {reply, Rep, State#state{env=NEnv}};
-
-handle_call({register, Record, Handler}, _From, State=#state{}) ->
-  ets:insert(?TRANSIT_HANDLERS, {Record, Handler}),
-  {reply, ok, State};
 
 handle_call(stop, _From, State) ->
   {stop, normal, ok, State};
@@ -88,3 +95,25 @@ code_change(_OldVsn, State, _Extra) ->
 
 write(Obj) ->
   gen_server:call(?MODULE, {write, Obj}).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+custom_handler_test() ->
+  {ok, _} = start(json, ?MODULE),
+  P = #point{x=1.5, y=2.5},
+  ?assertEqual(<<"[\"~#point\",[1.5,2.5]]">>, write(P)),
+  stop().
+
+%%% custom handler callback
+handler(Obj) ->
+  case is_record(Obj, point) of
+    true ->
+      #write_handler{tag=fun(_) -> <<"point">> end,
+                     rep=fun(Point=#point{x=X, y=Y}) -> [X, Y] end};
+    false ->
+      undefined
+  end.
+
+-endif.
+

@@ -2,7 +2,8 @@
 -include_lib("transit_format.hrl").
 -record(env, {started = queue:new() :: queue:queue(boolean()),
               is_key = queue:new() :: queue:queue(boolean()),
-              as_map_key=false :: boolean()
+              as_map_key=false :: boolean(),
+              custom_handler :: module()
              }).
 
 -type env()::#env{}.
@@ -10,7 +11,7 @@
 
 -export([write_sep/1, emit_array_start/1, emit_array_end/1, emit_map_start/1, emit_map_end/1]).
 -export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
--export([marshal_top/3, marshal/3, new_env/0]).
+-export([marshal_top/3, marshal/3, new_env/0, new_env/1]).
 
 -callback emit_null(Rep, Env) ->
   {Rep, Env}
@@ -153,22 +154,31 @@ as_map_key(Env) ->
 force_as_map_key(AsMapKey, Env) ->
   Env#env{as_map_key=AsMapKey}.
 
+find_handler(Obj, Env) ->
+  case transit_write_handlers:handler(Obj) of
+    undefined ->
+      CustomHandler = Env#env.custom_handler,
+      CustomHandler:handler(Obj);
+    Handler ->
+      Handler
+  end.
+
 marshal_top(M, Object, Env) ->
-  Handler = transit_write_handlers:handler(Object),
+  Handler = find_handler(Object, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
   if length(Tag) =:= 1 ->
-                         marshal(M, #tagged_value{tag=?QUOTE, rep=Object}, Env);
-                       true ->
-                         marshal(M, Object, Env)
-                    end.
+       marshal(M, #tagged_value{tag=?QUOTE, rep=Object}, Env);
+     true ->
+       marshal(M, Object, Env)
+  end.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, TaggedVal=#tagged_value{}, Env) ->
   Name:emit_tagged(TaggedVal, Env);
 
 marshal(Name, Obj, S) ->
-  Handler = transit_write_handlers:handler(Obj),
+  Handler = find_handler(Obj, S),
   TagFun = Handler#write_handler.tag,
   RepFun = case S#env.as_map_key of
                 true ->
@@ -205,6 +215,11 @@ marshal(Name, Obj, S) ->
 new_env() ->
   S = queue:from_list([true]),
   #env{started=S}.
+
+-spec new_env(module()) -> env().
+new_env(CustomHandler) ->
+  S = queue:from_list([true]),
+  #env{started=S, custom_handler=CustomHandler}.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

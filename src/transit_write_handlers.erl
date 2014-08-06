@@ -1,4 +1,5 @@
 -module(transit_write_handlers).
+-behaviour(transit_write_handler).
 -export([handler/1]).
 -include_lib("transit_format.hrl").
 
@@ -149,7 +150,7 @@ handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
 handler(Data) ->
   case transit_utils:is_set(Data) of
     undefined ->
-      #write_handler{};
+      undefined;
     Set ->
       #write_handler{tag=fun(_) -> ?Set end,
                      rep=fun(Rep) -> #tagged_value{tag=?Array, rep=Set:to_list(Rep)} end,
