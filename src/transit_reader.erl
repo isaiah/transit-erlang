@@ -98,8 +98,10 @@ parse_string(String, _AsMapKey) ->
       String
   end.
 
-decode_array_hash(Name, AsMapKey) ->
-  [{decode(Key, true), decode(Val, AsMapKey)} || {Key, Val} <- Name].
+decode_array_hash([Key,Val|Name], AsMapKey) ->
+  [{decode(Key, true), decode(Val, AsMapKey)}|decode_array_hash(Name, AsMapKey)];
+decode_array_hash([], _AsMapKey) ->
+  [].
 
 decode_array(Name, AsMapKey) ->
   [decode(El, AsMapKey) || El <- Name].
@@ -150,6 +152,7 @@ unmarshal_quoted(ok) ->
            {false, <<"[\"~#'\", false]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
            {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
+           {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
            {[{foo, <<"bar">>}], <<"{\"~:foo\":\"bar\"}">>}
           ],
   [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].

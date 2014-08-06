@@ -4,7 +4,7 @@ Status](https://travis-ci.org/isaiah/transit-erlang.svg)](https://travis-ci.org/
 transit-erlang
 ==============
 
-Test and developed on erlang R17.
+Test and developed on Erlang/OTP R17.
 
 Usage
 -----
