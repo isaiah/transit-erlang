@@ -29,19 +29,9 @@ encode(Name, AsMapKey) ->
 decode(Name, AsMapKey) ->
   gen_server:call(?MODULE, {decode, Name, AsMapKey}).
 
-handle_call({encode, Name, AsMapKey}, _From, C=#cache{kv=Kv}) ->
-  case dict:find(Name, Kv) of
-    {ok, Val} ->
-      {reply, Val, C};
-    error ->
-      case is_cacheable(Name, AsMapKey) of
-        true ->
-          {Val, C1} = encache(Name, C),
-          {reply, Val, C1};
-        false ->
-          {reply, Name, C}
-      end
-  end;
+handle_call({encode, Name, AsMapKey}, _From, C) ->
+  {Val, C1} = encode(Name, AsMapKey, C),
+  {reply, Val, C1};
 
 handle_call({decode, Name, AsMapKey}, _From, C=#cache{kv=Kv}) ->
   case is_cache_key(Name) of
@@ -152,6 +142,19 @@ encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
       {Name, C#cache{kv=dict:store(Key, Name, Kv), vk=dict:store(Name, Key, Vk)}}
   end.
 
+encode(Name, AsMapKey, C=#cache{kv=Kv}) ->
+  case dict:find(Name, Kv) of
+    {ok, Val} ->
+      {Val, C};
+    error ->
+      case is_cacheable(Name, AsMapKey) of
+        true ->
+          encache(Name, C);
+        false ->
+          {Name, C}
+      end
+  end.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -161,6 +164,14 @@ is_cache_key_test_() ->
   ?_assertNot(is_cache_key(<<"123">>)),
   ?_assertNot(is_cache_key(<<"">>)).
 
-is_cacheable_test() ->
-  ?assert(is_cacheable(<<"~#tag">>, false)).
+is_cacheable_test_() ->
+  ?_assert(is_cacheable(<<"~#tag">>, false)),
+  ?_assertNot(is_cacheable(<<"~#tag">>, true)),
+  ?_assert(is_cacheable(<<"~:foobar">>, true)),
+  ?_assert(is_cacheable(<<"foobar">>, true)),
+  ?_assertNot(is_cacheable(<<"foobar">>, false)).
+
+encache_test() ->
+  {_, C} = encache(<<"foobar">>, #cache{}),
+  {<<"^0">>, _} = encode(<<"foobar">>, true, C).
 -endif.

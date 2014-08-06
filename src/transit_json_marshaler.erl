@@ -101,7 +101,7 @@ emit_array(A, S) ->
                         {NE, NS2} = transit_marshaler:marshal(?MODULE, E, NS1),
                         {<<In/bitstring, NE/bitstring>>, NS2}
                     end,
-                    {<<"">>, S1}, A),
+                    {<<>>, S1}, A),
   {ArrayEnd, S3} = transit_marshaler:emit_array_end(S2),
   {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
 
@@ -142,6 +142,11 @@ marshals_extend(ok) ->
            {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, [{a, b}, {3, 4}]},
            {<<"[\"^ \",\"a\",\"b\",3,4]">>, [{"a", "b"}, {3, 4}]},
+           %XXX Failing, because the way emit_map is implemented by flatten_map
+           %{<<"[[\"^ \",\"foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
+           %  [#{"foobar" =>"foobar"},#{"foobar" =>"foobar"}]},
+           {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
+             [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
