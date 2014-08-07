@@ -95,6 +95,14 @@ keyword_rep(K) ->
 keyword_string_rep(K) ->
   list_to_binary(atom_to_list(K)).
 
+%%% date handler
+datetime_tag(_D) ->
+  ?Date.
+datetime_rep({Mega, Sec, Micro}) ->
+  (Mega*1000000+Sec)*1000000+Micro.
+datetime_string_rep({_, _, _}=D) ->
+  integer_to_binary(datetime_rep(D)).
+
 %%% UUID handler
 uuid_tag(_U) ->
   ?UUID.

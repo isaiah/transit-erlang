@@ -18,6 +18,7 @@
 -define(String, <<"s">>).
 -define(Boolean, <<"?">>).
 -define(Keyword, <<":">>).
+-define(Date, <<"m">>).
 -define(UUID, <<"u">>).
 -define(URI, <<"r">>).
 -define(Array, <<"array">>).
