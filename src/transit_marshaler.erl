@@ -53,6 +53,9 @@
   {Rep, Env}
     when Tag::bitstring(), Rep::bitstring(), Env::env().
 
+-callback handler(Obj) ->
+  Handler when Obj::term(), Handler::transit_writer_handlers:writer_handler().
+
 %%% flatten R17 map
 flatten_map(M) when is_map(M) ->
   maps:fold(fun(K, V, In) ->
@@ -154,20 +157,25 @@ as_map_key(Env) ->
 force_as_map_key(AsMapKey, Env) ->
   Env#env{as_map_key=AsMapKey}.
 
-find_handler(Obj, Env) ->
-  case transit_write_handlers:handler(Obj) of
+find_handler(Obj, M, Env) ->
+  case M:handler(Obj) of
     undefined ->
-      CustomHandler = Env#env.custom_handler,
-      CustomHandler:handler(Obj);
+      case transit_write_handlers:handler(Obj) of
+        undefined ->
+          CustomHandler = Env#env.custom_handler,
+          CustomHandler:handler(Obj);
+        Handler ->
+          Handler
+      end;
     Handler ->
       Handler
   end.
 
 marshal_top(M, Object, Env) ->
-  Handler = find_handler(Object, Env),
+  Handler = find_handler(Object, M, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
-  if length(Tag) =:= 1 ->
+  if bit_size(Tag) =:= 8 ->
        marshal(M, #tagged_value{tag=?QUOTE, rep=Object}, Env);
      true ->
        marshal(M, Object, Env)
@@ -178,7 +186,7 @@ marshal(Name, TaggedVal=#tagged_value{}, Env) ->
   Name:emit_tagged(TaggedVal, Env);
 
 marshal(Name, Obj, S) ->
-  Handler = find_handler(Obj, S),
+  Handler = find_handler(Obj, Name, S),
   TagFun = Handler#write_handler.tag,
   RepFun = case S#env.as_map_key of
                 true ->
@@ -206,7 +214,14 @@ marshal(Name, Obj, S) ->
     ?String ->
       Name:emit_string(<<>>, list_to_binary(Rep), S);
     T when bit_size(T) =:= 8 ->
-      Name:emit_string(<<?ESC/bitstring, T/bitstring>>, list_to_binary(Rep), S);
+      case is_list(Rep) of
+        true ->
+          Name:emit_string(<<?ESC/bitstring, T/bitstring>>, list_to_binary(Rep), S);
+        false ->
+          F = Handler#write_handler.string_rep,
+          StrRep = F(Obj),
+          Name:emit_string(<<?ESC/bitstring, T/bitstring>>, StrRep, S)
+      end;
     T ->
       Name:emit_encoded(T, Rep, S)
 

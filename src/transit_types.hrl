@@ -1,0 +1,1 @@
+-record(transit_datetime, {timestamp=os:timestamp() :: erlang:timestamp()}).

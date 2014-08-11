@@ -4,7 +4,8 @@
 -include_lib("transit_format.hrl").
 
 -export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2, emit_string/3,
-         emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2]).
+         emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2,
+         handler/1]).
 
 emit_null(_Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
@@ -105,6 +106,8 @@ emit_array(A, S) ->
   {ArrayEnd, S3} = transit_marshaler:emit_array_end(S2),
   {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
 
+handler(_Obj) -> undefined.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
@@ -131,6 +134,7 @@ marshals_tagged(ok) ->
            {<<"[\"~#'\",1234]">>, 1234},
            {<<"[\"~#'\",true]">>, true},
            {<<"[\"~#'\",false]">>, false},
+           {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~#'\",2.5]">>, 2.5}
           ],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
@@ -148,6 +152,7 @@ marshals_extend(ok) ->
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
              [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
+           {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].

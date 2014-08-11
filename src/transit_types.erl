@@ -1,7 +1,7 @@
 -module(transit_types).
--export([datetime/1]).
+-include_lib("transit_types.hrl").
 
--record(transit_datetime, {timestamp=os:timestamp() :: erlang:timestamp()}).
+-export([datetime/1]).
 
 -type datetime() :: #transit_datetime{}.
 -export_type([datetime/0]).

@@ -19,6 +19,7 @@
 -define(Boolean, <<"?">>).
 -define(Keyword, <<":">>).
 -define(Date, <<"m">>).
+-define(VerboseDate, <<"t">>).
 -define(UUID, <<"u">>).
 -define(URI, <<"r">>).
 -define(Array, <<"array">>).

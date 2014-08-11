@@ -2,6 +2,7 @@
 -behaviour(transit_write_handler).
 -export([handler/1]).
 -include_lib("transit_format.hrl").
+-include_lib("transit_types.hrl").
 
 -define(UUID_MASK, math:pow(2, 64) - 1).
 
@@ -98,9 +99,9 @@ keyword_string_rep(K) ->
 %%% date handler
 datetime_tag(_D) ->
   ?Date.
-datetime_rep({Mega, Sec, Micro}) ->
+datetime_rep(_T=#transit_datetime{timestamp={Mega, Sec, Micro}}) ->
   (Mega*1000000+Sec)*1000000+Micro.
-datetime_string_rep({_, _, _}=D) ->
+datetime_string_rep(D=#transit_datetime{}) ->
   integer_to_binary(datetime_rep(D)).
 
 %%% UUID handler
@@ -153,6 +154,8 @@ handler(Data) when is_atom(Data) ->
     _ ->
       #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
   end;
+handler(Data) when is_record(Data, transit_datetime) ->
+  #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
 handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
   #write_handler{tag=fun(_) -> Tag end, rep=fun(_) -> Rep end, string_rep = fun(_) -> list_to_binary(Rep) end};
 handler(Data) ->

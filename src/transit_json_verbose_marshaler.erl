@@ -1,10 +1,12 @@
 -module(transit_json_verbose_marshaler).
 -behaviour(transit_marshaler).
 -include_lib("transit_format.hrl").
+-include_lib("transit_types.hrl").
 
 -export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2]).
 -export([emit_string/3, emit_object/2, emit_tagged/2]).
 -export([emit_encoded/3, emit_array/2, emit_map/2]).
+-export([handler/1]).
 
 -spec emit_map(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
@@ -55,6 +57,15 @@ emit_encoded(Tag, Rep, Env) ->
 emit_null(Rep, Env) ->
   transit_json_marshaler:emit_null(Rep, Env).
 
+handler(Obj) when is_record(Obj, transit_datetime) ->
+  #write_handler{tag=fun(_) -> ?VerboseDate end,
+                 rep=fun(_D=#transit_datetime{timestamp=D}) ->
+                         transit_utils:iso_8601_fmt(D) end,
+                 string_rep=fun(_D=#transit_datetime{timestamp=D}) ->
+                         transit_utils:iso_8601_fmt(D) end
+                };
+handler(_) -> undefined.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
@@ -84,6 +95,7 @@ marshals_extend(ok) ->
   Env = transit_marshaler:new_env(),
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
+           {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
            {<<"{\"~f3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
 -endif.
