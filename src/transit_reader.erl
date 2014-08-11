@@ -65,11 +65,11 @@ decode(Name, AsMapKey) when is_list(Name) ->
   case Name of
     [?MAP_AS_ARR|Tail] ->
       decode_array_hash(Tail, AsMapKey);
-    [{_, _}|_] -> 
+    [{_, _}|_] ->
       decode_hash(Name, AsMapKey);
     [EscapedTag, Rep] ->
       <<"~", "#", Tag/binary>> = EscapedTag,
-      decode_tag(Tag, Rep, AsMapKey);
+      decode_tag(Tag, decode(Rep, AsMapKey), AsMapKey);
     _ ->
       decode_array(Name, AsMapKey)
   end;
@@ -150,6 +150,9 @@ unmarshal_quoted(ok) ->
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
+           {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
+           %XXX Broken
+           {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
            {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
            {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},

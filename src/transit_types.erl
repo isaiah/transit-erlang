@@ -8,5 +8,6 @@
 
 -spec datetime(Timestamp) ->
   DateTime when Timestamp :: erlang:timestamp(), DateTime :: datetime().
-datetime(Timestamp) ->
+datetime({_, _, _} = Timestamp) ->
   #transit_datetime{timestamp=Timestamp}.
+
