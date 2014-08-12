@@ -144,15 +144,13 @@ unmarshal_test_() ->
    [fun unmarshal_quoted/1]}.
 
 unmarshal_quoted(ok) ->
-  Env = transit_marshaler:new_env(),
   Tests = [{1, <<"[\"~#'\", 1]">>},
            {<<"foo">>, <<"[\"~#'\", \"foo\"]">>},
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
-           %XXX Broken
-           {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
+           %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
            {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
            {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
