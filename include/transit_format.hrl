@@ -22,6 +22,7 @@
 -define(VerboseDate, <<"t">>).
 -define(UUID, <<"u">>).
 -define(URI, <<"r">>).
+-define(Binary, <<"b">>).
 -define(Link, <<"link">>).
 -define(Array, <<"array">>).
 -define(Map, <<"map">>).

@@ -152,7 +152,9 @@ marshals_extend(Env) ->
              [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
            {<<"[\"~rhttp://google.com\"]">>, [transit_types:uri("http://google.com")]},
+           {<<"[\"~u531a379e-31bb-4ce1-8690-158dceb64be6\"]">>, [transit_types:uuid("531a379e-31bb-4ce1-8690-158dceb64be6")]},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
+           {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary("c3VyZS4=")]},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].

@@ -2,7 +2,7 @@
 -include_lib("transit_types.hrl").
 -include_lib("transit_format.hrl").
 
--export([datetime/1, uri/1, uuid/1, link/1]).
+-export([datetime/1, uri/1, uuid/1, link/1, binary/1]).
 
 -type datetime() :: #transit_datetime{}.
 -export_type([datetime/0]).
@@ -20,6 +20,9 @@ link(Link) ->
 
 uuid(ID) ->
   tv(?UUID, ID).
+
+binary(B) ->
+  tv(?Binary, B).
 
 tv(Tag, Value) ->
   #tagged_value{tag=Tag, rep=Value}.
