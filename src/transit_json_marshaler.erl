@@ -151,6 +151,7 @@ marshals_extend(Env) ->
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
              [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
+           {<<"[\"~rhttp://google.com\"]">>, [transit_types:uri("http://google.com")]},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],

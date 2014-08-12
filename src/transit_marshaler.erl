@@ -181,15 +181,12 @@ marshal_top(M, Object, Env) ->
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
   if bit_size(Tag) =:= 8 ->
-       marshal(M, #tagged_value{tag=?QUOTE, rep=Object}, Env);
+       M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
      true ->
        marshal(M, Object, Env)
   end.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
-marshal(Name, TaggedVal=#tagged_value{}, Env) ->
-  Name:emit_tagged(TaggedVal, Env);
-
 marshal(Name, Obj, S) ->
   Handler = find_handler(Obj, Name, S),
   TagFun = Handler#write_handler.tag,
@@ -219,14 +216,14 @@ marshal(Name, Obj, S) ->
     ?String ->
       Name:emit_string(<<>>, list_to_binary(Rep), S);
     T when bit_size(T) =:= 8 ->
-      case is_list(Rep) of
-        true ->
-          Name:emit_string(<<?ESC/bitstring, T/bitstring>>, list_to_binary(Rep), S);
-        false ->
-          F = Handler#write_handler.string_rep,
-          StrRep = F(Obj),
-          Name:emit_string(<<?ESC/bitstring, T/bitstring>>, StrRep, S)
-      end;
+      BinaryRep = case is_list(Rep) of
+                    true ->
+                      list_to_binary(Rep);
+                    false ->
+                      F = Handler#write_handler.string_rep,
+                      F(Obj)
+                  end,
+      Name:emit_string(<<?ESC/bitstring, T/bitstring>>, BinaryRep, S);
     T ->
       Name:emit_encoded(T, Rep, S)
 
