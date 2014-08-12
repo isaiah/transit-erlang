@@ -23,6 +23,6 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-  ChildSpec = ?CHILD(transit_json_marshaler, worker),
-  {ok, { {one_for_one, 5, 10}, [ChildSpec]} }.
-
+  WriterSpec = ?CHILD(transit_writer, worker),
+  ReaderSpec = ?CHILD(transit_reader, worker),
+  {ok, { {one_for_one, 5, 10}, [WriterSpec, ReaderSpec]} }.

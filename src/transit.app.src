@@ -1,8 +1,8 @@
 {application, transit,
  [
-  {description, "transit-format library for erlang."},
+  {description, "transit-format implementation for erlang."},
   {vsn, "0.8.1"},
-  {registered, []},
+  {registered, [transit_sup, transit_writer, transit_reader]},
   {applications, [
                   kernel,
                   stdlib
