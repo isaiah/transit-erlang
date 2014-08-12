@@ -3,6 +3,7 @@ Status](https://travis-ci.org/isaiah/transit-erlang.svg)](https://travis-ci.org/
 
 transit-erlang
 ==============
+[transit-format](https://github.com/cognitect/transit-format) implementation in Erlang.
 
 Test and developed on Erlang/OTP R17.
 
