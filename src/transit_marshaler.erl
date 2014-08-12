@@ -3,6 +3,7 @@
 -record(env, {started = queue:new() :: queue:queue(boolean()),
               is_key = queue:new() :: queue:queue(boolean()),
               as_map_key=false :: boolean(),
+              cache :: pid(),
               custom_handler :: module()
              }).
 
@@ -11,7 +12,7 @@
 
 -export([write_sep/1, emit_array_start/1, emit_array_end/1, emit_map_start/1, emit_map_end/1]).
 -export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
--export([marshal_top/3, marshal/3, new_env/0, new_env/1]).
+-export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
 
 -callback emit_null(Rep, Env) ->
   {Rep, Env}
@@ -151,8 +152,12 @@ is_escapable(S) ->
   end.
 
 -spec as_map_key(env()) -> boolean().
-as_map_key(Env) ->
-  Env#env.as_map_key.
+as_map_key(_Env=#env{as_map_key=K}) ->
+  K.
+
+-spec cache(env()) -> pid().
+cache(_Env=#env{cache=C}) ->
+  C.
 
 force_as_map_key(AsMapKey, Env) ->
   Env#env{as_map_key=AsMapKey}.
@@ -228,13 +233,15 @@ marshal(Name, Obj, S) ->
   end.
 
 new_env() ->
+  {ok, Cache} = transit_rolling_cache:start(),
   S = queue:from_list([true]),
-  #env{started=S}.
+  #env{started=S, cache=Cache}.
 
 -spec new_env(module()) -> env().
 new_env(CustomHandler) ->
+  {ok, Cache} = transit_rolling_cache:start(),
   S = queue:from_list([true]),
-  #env{started=S, custom_handler=CustomHandler}.
+  #env{started=S, custom_handler=CustomHandler, cache=Cache}.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

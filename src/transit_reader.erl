@@ -35,51 +35,51 @@ read(Name) ->
 %% ------------------------------------------------------------------
 
 init([]) ->
-  transit_rolling_cache:start_link(),
-  {ok, false}.
+  {ok, Cache} = transit_rolling_cache:start(),
+  {ok, Cache}.
 
-handle_call({read, Name}, _From, AsMapKey) ->
-  Val = decode(Name, false),
-  {reply, Val, AsMapKey};
-handle_call(_Request, _From, AsMapKey) ->
-  {reply, ok, AsMapKey}.
+handle_call({read, Name}, _From, Cache) ->
+  Val = decode(Cache, Name, false),
+  {reply, Val, Cache};
+handle_call(_Request, _From, Cache) ->
+  {reply, ok, Cache}.
 
-handle_cast(_Msg, AsMapKey) ->
-  {noreply, AsMapKey}.
+handle_cast(_Msg, Cache) ->
+  {noreply, Cache}.
 
-handle_info(_Info, AsMapKey) ->
-  {noreply, AsMapKey}.
+handle_info(_Info, Cache) ->
+  {noreply, Cache}.
 
-terminate(_Reason, _AsMapKey) ->
+terminate(_Reason, _Cache) ->
   ok.
 
-code_change(_OldVsn, AsMapKey, _Extra) ->
-  {ok, AsMapKey}.
+code_change(_OldVsn, Cache, _Extra) ->
+  {ok, Cache}.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-decode(Name, AsMapKey) when is_bitstring(Name) ->
-  decode_string(Name, AsMapKey);
-decode(Name, AsMapKey) when is_list(Name) ->
+decode(Cache, Name, AsMapKey) when is_bitstring(Name) ->
+  decode_string(Cache, Name, AsMapKey);
+decode(Cache, Name, AsMapKey) when is_list(Name) ->
   case Name of
     [?MAP_AS_ARR|Tail] ->
-      decode_array_hash(Tail, AsMapKey);
+      decode_array_hash(Cache, Tail, AsMapKey);
     [{_, _}|_] ->
-      decode_hash(Name, AsMapKey);
+      decode_hash(Cache, Name, AsMapKey);
     [EscapedTag, Rep] ->
       <<"~", "#", Tag/binary>> = EscapedTag,
-      decode_tag(Tag, decode(Rep, AsMapKey), AsMapKey);
+      decode_tag(Tag, decode(Cache, Rep, AsMapKey), AsMapKey);
     _ ->
-      decode_array(Name, AsMapKey)
+      decode_array(Cache, Name, AsMapKey)
   end;
-decode(Name, _AsMapKey) ->
+decode(_Cache, Name, _AsMapKey) ->
   Name.
 
-decode_string(String, AsMapKey) ->
-  parse_string(transit_rolling_cache:decode(String, AsMapKey), AsMapKey).
+decode_string(Cache, String, AsMapKey) ->
+  parse_string(transit_rolling_cache:decode(Cache, String, AsMapKey), AsMapKey).
 
-parse_string(String, _AsMapKey) ->
+parse_string(String, _Cache) ->
   case String of
     <<"~",Tag:8/binary-unit:1, Rep/binary>> ->
       case transit_read_handlers:handler(Tag) of
@@ -98,43 +98,43 @@ parse_string(String, _AsMapKey) ->
       String
   end.
 
-decode_array_hash([Key,Val|Name], AsMapKey) ->
-  [{decode(Key, true), decode(Val, AsMapKey)}|decode_array_hash(Name, AsMapKey)];
-decode_array_hash([], _AsMapKey) ->
+decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
+  [{decode(Cache, Key, true), decode(Cache, Val, AsMapKey)}|decode_array_hash(Cache, Name, AsMapKey)];
+decode_array_hash(_Cache, [], _AsMapKey) ->
   [].
 
-decode_array(Name, AsMapKey) ->
-  [decode(El, AsMapKey) || El <- Name].
+decode_array(Cache, Name, AsMapKey) ->
+  [decode(Cache, El, AsMapKey) || El <- Name].
 
-decode_tag(Tag, Rep, _AsMapKey) ->
+decode_tag(Tag, Rep, _Cache) ->
   F = transit_read_handlers:handler(Tag),
   F(Rep).
 
-decode_hash(Name, AsMapKey) when length(Name) =:= 1 ->
+decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
   case Name of
     [{Key, Val}] ->
-      case decode(Key, AsMapKey) of
+      case decode(Cache, Key, AsMapKey) of
         #tagged_value{tag=Tag} ->
-          DecodedVal = decode(Val, AsMapKey),
+          DecodedVal = decode(Cache, Val, AsMapKey),
           decode_tag(Tag, DecodedVal, AsMapKey);
         DecodedKey ->
-          Rep = decode(Val, false),
+          Rep = decode(Cache, Val, false),
           [{DecodedKey, Rep}]
       end;
     _ ->
       erlang:throw({"unkown hash format: ", Name})
   end;
-decode_hash(Name, AsMapKey) ->
-  [{decode(Key, AsMapKey), decode(Val, AsMapKey)} || {Key, Val} <- Name].
+decode_hash(Cache, Name, AsMapKey) ->
+  [{decode(Cache, Key, AsMapKey), decode(Cache, Val, AsMapKey)} || {Key, Val} <- Name].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  transit_rolling_cache:start_link(),
-  ok.
+  {ok, C} = transit_rolling_cache:start(),
+  C.
 
-stop_server(ok) ->
-  ok = transit_rolling_cache:stop(),
+stop_server(C) ->
+  ok = transit_rolling_cache:stop(C),
   ok.
 
 unmarshal_test_() ->
@@ -143,7 +143,7 @@ unmarshal_test_() ->
    fun stop_server/1,
    [fun unmarshal_quoted/1]}.
 
-unmarshal_quoted(ok) ->
+unmarshal_quoted(C) ->
   Tests = [{1, <<"[\"~#'\", 1]">>},
            {<<"foo">>, <<"[\"~#'\", \"foo\"]">>},
            {undefined, <<"[\"~#'\", null]">>},
@@ -153,10 +153,11 @@ unmarshal_quoted(ok) ->
            %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
            {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
+           {[{<<"a">>, <<"b">>}, {3, 4}], <<"[\"^ \",\"a\",\"b\",3,4]">>},
            {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
            {[{foo, <<"bar">>}], <<"{\"~:foo\":\"bar\"}">>}
           ],
-  [fun() -> Val = decode(jsx:decode(Str), false) end || {Val, Str} <- Tests].
+  [fun() -> Val = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
 parse_string_test() ->
   ?assertEqual(foo, parse_string(<<"~:foo">>, false)).

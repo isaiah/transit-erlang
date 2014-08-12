@@ -13,11 +13,6 @@
 
 -export([start_link/0, start_link/1, start/0, start/1, start/2, stop/0]).
 -export([write/1]).
--ifdef(TEST).
--export([handler/1]).
--record(point, {x,y}).
--endif.
-
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -51,7 +46,6 @@ stop() ->
 %% ------------------------------------------------------------------
 
 init([Format, CustomHandler]) ->
-  transit_rolling_cache:start_link(),
   Env = transit_marshaler:new_env(CustomHandler),
   Marshaler = case Format of
                 json_verbose ->
@@ -95,25 +89,3 @@ code_change(_OldVsn, State, _Extra) ->
 
 write(Obj) ->
   gen_server:call(?MODULE, {write, Obj}).
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-custom_handler_test() ->
-  {ok, _} = start(json, ?MODULE),
-  P = #point{x=1.5, y=2.5},
-  ?assertEqual(<<"[\"~#point\",[1.5,2.5]]">>, write(P)),
-  stop().
-
-%%% custom handler callback
-handler(Obj) ->
-  case is_record(Obj, point) of
-    true ->
-      #write_handler{tag=fun(_) -> <<"point">> end,
-                     rep=fun(#point{x=X, y=Y}) -> [X, Y] end};
-    false ->
-      undefined
-  end.
-
--endif.
-

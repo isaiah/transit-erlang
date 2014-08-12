@@ -16,10 +16,9 @@ erl -pa ebin deps/*/ebin
 
 ```erlang
 %%% In erl shell
-> transit_writer:start().
-> transit_writer:write(#{"a" => "b", 3 => 4}).
+> transit:start().
+> A = transit_writer:write(#{"a" => "b", 3 => 4}).
 => <<"[\"^ \",\"a\",\"b\",3,4]">>
-> transit_reader:start().
-> transit_reader:read(<<"[\"~#'\",\"foo\"]">>).
-=> <<"foo">>
+> transit:read(A).
+=> [{"a", "b"}, {3, 4}]
 ```
