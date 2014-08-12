@@ -11,7 +11,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, start_link/1, start/0, start/1, start/2, stop/0]).
+-export([start_link/0, start_link/2, start/0, start/1, start/2, stop/0]).
 -export([write/1]).
 
 %% ------------------------------------------------------------------
@@ -25,10 +25,10 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link(Format) ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [Format, ?MODULE], []).
+start_link(Format, CustomHandler) ->
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [Format, CustomHandler], []).
 start_link() ->
-  start_link(json).
+  start_link(json, undefined).
 
 start(Format, CustomHandler) ->
   gen_server:start({local, ?MODULE}, ?MODULE, [Format, CustomHandler], []).

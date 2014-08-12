@@ -9,7 +9,7 @@
 -export([init/1]).
 
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(I, Type, Args), {I, {I, start_link, Args}, permanent, 5000, Type, [I]}).
 
 %% ===================================================================
 %% API functions
@@ -23,6 +23,8 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-  WriterSpec = ?CHILD(transit_writer, worker),
-  ReaderSpec = ?CHILD(transit_reader, worker),
+  {ok, Format} = application:get_env(transit, format),
+  {ok, CustomHandler} = application:get_env(transit, write_handler),
+  WriterSpec = ?CHILD(transit_writer, worker, [Format, CustomHandler]),
+  ReaderSpec = ?CHILD(transit_reader, worker, [Format]),
   {ok, { {one_for_one, 5, 10}, [WriterSpec, ReaderSpec]} }.

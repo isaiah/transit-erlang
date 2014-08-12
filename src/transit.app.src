@@ -7,6 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { transit_app, []}},
-  {env, []}
+  {mod, { transit, []}},
+  {env, [{format, json}, {write_handler, undefined}]}
  ]}.

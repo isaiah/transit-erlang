@@ -8,7 +8,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, start/0, read/1]).
+-export([start_link/1, start/0, read/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -21,7 +21,7 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link() ->
+start_link(_Format) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 start() ->
