@@ -178,6 +178,6 @@ is_cacheable_test_() ->
   ?_assertNot(is_cacheable(<<"foobar">>, false)).
 
 encache_test() ->
-  {_, C} = encache(<<"foobar">>, #cache{}).
-  %{<<"^0">>, _} = encache(<<"foobar">>, true, C).
+  {_, C} = encache(<<"foobar">>, #cache{}),
+  {<<"^0">>, _} = encode_with_cache(<<"foobar">>, true, C).
 -endif.
