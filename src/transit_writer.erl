@@ -110,7 +110,7 @@ handler(Obj) ->
   case is_record(Obj, point) of
     true ->
       #write_handler{tag=fun(_) -> <<"point">> end,
-                     rep=fun(Point=#point{x=X, y=Y}) -> [X, Y] end};
+                     rep=fun(#point{x=X, y=Y}) -> [X, Y] end};
     false ->
       undefined
   end.

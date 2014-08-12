@@ -111,7 +111,7 @@ handler(_Obj) -> undefined.
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  {ok, _} = transit_rolling_cache:start_link(),
+  {ok, _} = transit_rolling_cache:start(),
   ok.
 
 stop_server(ok) ->
