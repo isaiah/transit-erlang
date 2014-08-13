@@ -1,3 +1,4 @@
 language: erlang
 otp_release:
      - 17.1
+script: rebar compile && rebar skip_deps=true eunit ct

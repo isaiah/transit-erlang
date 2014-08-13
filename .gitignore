@@ -6,3 +6,4 @@ deps
 *.plt
 erl_crash.dump
 ebin/
+logs/
