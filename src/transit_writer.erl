@@ -4,7 +4,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {env::transit_marshaler:env(),
-                marshaler=transit_json_marshaler :: atom()
+                marshaler=transit_json_marshaler :: atom(),
+                custom_handler :: module()
                }).
 
 %% ------------------------------------------------------------------
@@ -46,7 +47,6 @@ stop() ->
 %% ------------------------------------------------------------------
 
 init([Format, CustomHandler]) ->
-  Env = transit_marshaler:new_env(CustomHandler),
   Marshaler = case Format of
                 json_verbose ->
                   transit_json_verbose_marshaler;
@@ -57,10 +57,10 @@ init([Format, CustomHandler]) ->
                 _ ->
                   erlang:throw("unsupported marshaler: ~s", [Format])
               end,
-  {ok, #state{marshaler=Marshaler, env=Env}}.
+  {ok, #state{marshaler=Marshaler, custom_handler=CustomHandler}}.
 
-handle_call({write, Object}, _From, State=#state{marshaler=M, env=Env}) ->
-  {Rep, NEnv} = transit_marshaler:marshal_top(M, Object, Env),
+handle_call({write, Object}, _From, State=#state{marshaler=M, custom_handler=CustomHandler}) ->
+  {Rep, NEnv} = transit_marshaler:marshal_top(M, Object, CustomHandler),
   {reply, Rep, State#state{env=NEnv}};
 
 handle_call(stop, _From, State) ->

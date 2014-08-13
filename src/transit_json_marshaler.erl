@@ -139,7 +139,7 @@ marshals_tagged(Env) ->
           ],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
 
-marshals_extend(Env) ->
+marshals_extend(_Env) ->
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
            {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
@@ -157,5 +157,5 @@ marshals_extend(Env) ->
            {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary("c3VyZS4=")]},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
-  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
+  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
 -endif.

@@ -90,10 +90,10 @@ marshals_tagged(Env) ->
            {<<"{\"~#'\":1234}">>, 1234}],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
 
-marshals_extend(Env) ->
+marshals_extend(_Env) ->
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
            {<<"{\"~f3.5\":4.1}">>, #{3.5 => 4.1}}],
-  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, Env) end || {Res, Rep} <- Tests].
+  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
 -endif.

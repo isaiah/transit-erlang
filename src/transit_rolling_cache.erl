@@ -1,8 +1,8 @@
 -module(transit_rolling_cache).
 -behavior(gen_server).
--export([encode/3, decode/3]).
 -export([start_link/0, start/0, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([encode/3, decode/3]).
 -include_lib("transit_format.hrl").
 
 -define(CACHE_CODE_DIGITS, 44).

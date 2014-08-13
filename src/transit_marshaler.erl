@@ -1,5 +1,6 @@
 -module(transit_marshaler).
 -include_lib("transit_format.hrl").
+
 -record(env, {started = queue:new() :: queue:queue(boolean()),
               is_key = queue:new() :: queue:queue(boolean()),
               as_map_key=false :: boolean(),
@@ -176,15 +177,18 @@ find_handler(Obj, M, Env) ->
       Handler
   end.
 
-marshal_top(M, Object, Env) ->
+marshal_top(M, Object, CustomHandler) ->
+  Env = transit_marshaler:new_env(CustomHandler),
   Handler = find_handler(Object, M, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
-  if bit_size(Tag) =:= 8 ->
-       M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
-     true ->
-       marshal(M, Object, Env)
-  end.
+  Ret = if bit_size(Tag) =:= 8 ->
+             M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
+           true ->
+             marshal(M, Object, Env)
+        end,
+  transit_rolling_cache:stop(transit_marshaler:cache(Env)),
+  Ret.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, Obj, S) ->
