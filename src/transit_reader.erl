@@ -1,60 +1,20 @@
 -module(transit_reader).
--behaviour(gen_server).
 -include_lib("transit_format.hrl").
-
--define(SERVER, ?MODULE).
 
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/1, start/0, read/1]).
-
-%% ------------------------------------------------------------------
-%% gen_server Function Exports
-%% ------------------------------------------------------------------
-
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([read/1]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link(_Format) ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
-
-start() ->
-  gen_server:start({local, ?MODULE}, ?MODULE, [], []).
-
 read(Name) ->
-  gen_server:call(?MODULE, {read, jsx:decode(Name)}).
-
-%% ------------------------------------------------------------------
-%% gen_server Function Definitions
-%% ------------------------------------------------------------------
-
-init([]) ->
   Cache = {dict:new(), dict:new()},
-  {ok, Cache}.
-
-handle_call({read, Name}, _From, Cache) ->
-  Val = decode(Cache, Name, false),
-  {reply, Val, Cache};
-handle_call(_Request, _From, Cache) ->
-  {reply, ok, Cache}.
-
-handle_cast(_Msg, Cache) ->
-  {noreply, Cache}.
-
-handle_info(_Info, Cache) ->
-  {noreply, Cache}.
-
-terminate(_Reason, _Cache) ->
-  ok.
-
-code_change(_OldVsn, Cache, _Extra) ->
-  {ok, Cache}.
+  {Val, _Cache} = decode(Cache, jsx:decode(Name), false),
+  Val.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions

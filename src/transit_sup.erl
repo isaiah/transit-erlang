@@ -26,5 +26,4 @@ init([]) ->
   {ok, Format} = application:get_env(transit, format),
   {ok, CustomHandler} = application:get_env(transit, write_handler),
   WriterSpec = ?CHILD(transit_writer, worker, [Format, CustomHandler]),
-  ReaderSpec = ?CHILD(transit_reader, worker, [Format]),
-  {ok, { {one_for_one, 5, 10}, [WriterSpec, ReaderSpec]} }.
+  {ok, { {one_for_one, 5, 10}, [WriterSpec]} }.
