@@ -1,16 +1,6 @@
 -module(transit_marshaler).
 -include_lib("transit_format.hrl").
 
--record(env, {started = queue:new() :: queue:queue(boolean()),
-              is_key = queue:new() :: queue:queue(boolean()),
-              as_map_key=false :: boolean(),
-              cache :: pid(),
-              custom_handler :: module()
-             }).
-
--type env()::#env{}.
--export_type([env/0]).
-
 -export([write_sep/1, emit_array_start/1, emit_array_end/1, emit_map_start/1, emit_map_end/1]).
 -export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
@@ -178,7 +168,7 @@ find_handler(Obj, M, Env) ->
   end.
 
 marshal_top(M, Object, CustomHandler) ->
-  Env = transit_marshaler:new_env(CustomHandler),
+  Env = new_env(CustomHandler),
   Handler = find_handler(Object, M, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
@@ -187,7 +177,6 @@ marshal_top(M, Object, CustomHandler) ->
            true ->
              marshal(M, Object, Env)
         end,
-  transit_rolling_cache:stop(transit_marshaler:cache(Env)),
   Ret.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
@@ -234,15 +223,14 @@ marshal(Name, Obj, S) ->
   end.
 
 new_env() ->
-  {ok, Cache} = transit_rolling_cache:start(),
+  Cache = {dict:new(), dict:new()},
   S = queue:from_list([true]),
   #env{started=S, cache=Cache}.
 
 -spec new_env(module()) -> env().
 new_env(CustomHandler) ->
-  {ok, Cache} = transit_rolling_cache:start(),
-  S = queue:from_list([true]),
-  #env{started=S, custom_handler=CustomHandler, cache=Cache}.
+  Env = new_env(),
+  Env#env{custom_handler=CustomHandler}.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

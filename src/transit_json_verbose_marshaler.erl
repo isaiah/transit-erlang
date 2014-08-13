@@ -27,9 +27,10 @@ emit_string(Tag, Rep, Env) ->
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
   {MapStart, S} = transit_marshaler:emit_map_start(Env),
-  S1 = transit_marshaler:force_as_map_key(true, S),
+  S0 = transit_marshaler:force_as_map_key(true, S),
   Cache = transit_marshaler:cache(Env),
-  EncodedTag = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S1)),
+  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
+  S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
   S3 = transit_marshaler:force_as_map_key(false, S2),
   {Body, S4} =  transit_marshaler:marshal(?MODULE, Rep, S3),
@@ -73,7 +74,6 @@ start_server() ->
   transit_marshaler:new_env().
 
 stop_server(Env) ->
-  ok = transit_rolling_cache:stop(transit_marshaler:cache(Env)),
   ok.
 
 marshals_extention_test_() ->

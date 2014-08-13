@@ -43,9 +43,10 @@ emit_float(Rep, Env) ->
   {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
-  {ArrayStart, S1} = transit_marshaler:emit_array_start(Env),
-  Cache = transit_marshaler:cache(Env),
-  EncodedTag = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S1)),
+  {ArrayStart, S0} = transit_marshaler:emit_array_start(Env),
+  Cache = transit_marshaler:cache(S0),
+  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
+  S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
   {Body, S3} =  transit_marshaler:marshal(?MODULE, Rep, S2),
   {ArrayEnd, S4} = transit_marshaler:emit_array_end(S3),
@@ -66,8 +67,9 @@ emit_encoded(Tag, Rep, Env) ->
 emit_string(Tag, String, Env) ->
   Escaped = transit_marshaler:escape(String),
   Cache = transit_marshaler:cache(Env),
-  Encoded = transit_rolling_cache:encode(Cache, <<Tag/bitstring, Escaped/bitstring>>, transit_marshaler:as_map_key(Env)),
-  emit_object(Encoded, Env).
+  {Encoded, Cache1} = transit_rolling_cache:encode(Cache, <<Tag/bitstring, Escaped/bitstring>>, transit_marshaler:as_map_key(Env)),
+  Env1 = Env#env{cache=Cache1},
+  emit_object(Encoded, Env1).
 
 -spec emit_object(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
@@ -117,7 +119,7 @@ start_server() ->
   transit_marshaler:new_env().
 
 stop_server(Env) ->
-  ok = transit_rolling_cache:stop(transit_marshaler:cache(Env)).
+  ok.
 
 marshals_extention_test_() ->
   {foreach,

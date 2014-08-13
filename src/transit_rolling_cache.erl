@@ -1,7 +1,4 @@
 -module(transit_rolling_cache).
--behavior(gen_server).
--export([start_link/0, start/0, stop/1]).
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -export([encode/3, decode/3]).
 -include_lib("transit_format.hrl").
 
@@ -9,77 +6,34 @@
 -define(FIRST_ORD, 48).
 -define(MIN_SIZE_CACHEABLE, 4 * 8).
 
--record(cache, {kv=dict:new() :: dict:dict(),
-                vk=dict:new() :: dict:dict()}).
-
-start_link() ->
-  gen_server:start_link(?MODULE, [], []).
-
-start() ->
-  gen_server:start(?MODULE, [], []).
-
--spec stop(pid()) -> ok.
-stop(Pid) ->
-  gen_server:cast(Pid, stop).
-
-init([]) ->
-  {ok, #cache{}}.
-
 -spec encode(Cache, Name, boolean()) -> Name when Cache::pid(), Name::bitstring().
 encode(Cache, Name, AsMapKey) ->
-  gen_server:call(Cache, {encode, Name, AsMapKey}).
+  encode_with_cache(Name, AsMapKey, Cache).
 
--spec decode(Cache, Name, boolean()) -> Name when Cache::pid(), Name::bitstring().
-decode(Cache, Name, AsMapKey) ->
-  gen_server:call(Cache, {decode, Name, AsMapKey}).
-
-handle_call({encode, Name, AsMapKey}, _From, C) ->
-  {Val, C1} = encode_with_cache(Name, AsMapKey, C),
-  {reply, Val, C1};
-
-handle_call({decode, Name, AsMapKey}, _From, C=#cache{kv=Kv}) ->
+decode(C={Kv, _}, Name, AsMapKey) ->
   case is_cache_key(Name) of
     true ->
       case dict:find(Name, Kv) of
         {ok, Val} ->
-          {reply, Val, C};
+          {Val, C};
         _ ->
           case is_cacheable(Name, AsMapKey) of
             true ->
               {Val, C1} = encache(Name, C),
-              {reply, Val, C1};
+              {Val, C1};
             false ->
-              {reply, Name, C}
+              {Name, C}
           end
       end;
     false ->
       case is_cacheable(Name, AsMapKey) of
         true ->
           {Val, C2} = encache(Name, C),
-          {reply, Val, C2};
+          {Val, C2};
         false ->
-          {reply, Name, C}
+          {Name, C}
       end
-  end;
-handle_call(stop, _From, State) ->
-  {stop, normal, ok, State};
-
-handle_call(_Msg, _From, C) ->
-  {reply, ok, C}.
-
-handle_cast(stop, C) ->
-  {stop, normal, C};
-handle_cast(_Msg, C) ->
-  {noreply, C}.
-
-handle_info(_Info, C) ->
-  {noreply, C}.
-
-code_change(_OldVsn, C, _Extra) ->
-  {ok, C}.
-
-terminate(_Rsn, _C) ->
-  ok.
+  end.
 
 -spec is_cache_key(bitstring()) -> boolean().
 is_cache_key(Name) when bit_size(Name) > 16 ->
@@ -139,16 +93,16 @@ is_cacheable(Str, false) ->
 %  [Int] = io_lib_format:fwrite("~w", Char),
 %  Int.
 
-encache(Name, C=#cache{kv=Kv, vk=Vk}) ->
+encache(Name, C={Kv,Vk}) ->
   case dict:find(Name, Vk) of
     {ok, Val} ->
       {Val, C};
     error ->
       Key = encode_key(dict:size(Kv)),
-      {Name, C#cache{kv=dict:store(Key, Name, Kv), vk=dict:store(Name, Key, Vk)}}
+      {Name, {dict:store(Key, Name, Kv), dict:store(Name, Key, Vk)}}
   end.
 
-encode_with_cache(Name, AsMapKey, C=#cache{kv=Kv}) ->
+encode_with_cache(Name, AsMapKey, C={Kv, _}) ->
   case dict:find(Name, Kv) of
     {ok, Val} ->
       {Val, C};
@@ -178,6 +132,6 @@ is_cacheable_test_() ->
   ?_assertNot(is_cacheable(<<"foobar">>, false)).
 
 encache_test() ->
-  {_, C} = encache(<<"foobar">>, #cache{}),
+  {_, C} = encache(<<"foobar">>, {dict:new(), dict:new()}),
   {<<"^0">>, _} = encode_with_cache(<<"foobar">>, true, C).
 -endif.

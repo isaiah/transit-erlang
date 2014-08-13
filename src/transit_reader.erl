@@ -35,7 +35,7 @@ read(Name) ->
 %% ------------------------------------------------------------------
 
 init([]) ->
-  {ok, Cache} = transit_rolling_cache:start(),
+  Cache = {dict:new(), dict:new()},
   {ok, Cache}.
 
 handle_call({read, Name}, _From, Cache) ->
@@ -69,15 +69,17 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
       decode_hash(Cache, Name, AsMapKey);
     [EscapedTag, Rep] ->
       <<"~", "#", Tag/binary>> = EscapedTag,
-      decode_tag(Tag, decode(Cache, Rep, AsMapKey), AsMapKey);
+      {DRep, Cache1} = decode(Cache, Rep, AsMapKey),
+      {decode_tag(Tag, DRep), Cache1};
     _ ->
       decode_array(Cache, Name, AsMapKey)
   end;
-decode(_Cache, Name, _AsMapKey) ->
-  Name.
+decode(Cache, Name, _AsMapKey) ->
+  {Name, Cache}.
 
 decode_string(Cache, String, AsMapKey) ->
-  parse_string(transit_rolling_cache:decode(Cache, String, AsMapKey), AsMapKey).
+  {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
+  {parse_string(OrigStr, AsMapKey), Cache1}.
 
 parse_string(String, _Cache) ->
   case String of
@@ -99,14 +101,19 @@ parse_string(String, _Cache) ->
   end.
 
 decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
-  [{decode(Cache, Key, true), decode(Cache, Val, AsMapKey)}|decode_array_hash(Cache, Name, AsMapKey)];
-decode_array_hash(_Cache, [], _AsMapKey) ->
-  [].
+  {DKey, C1} = decode(Cache, Key, true),
+  {DVal, C2} = decode(C1, Val, false),
+  {Tail, C3} = decode_array_hash(C2, Name, AsMapKey),
+  {[{DKey, DVal}|Tail], C3};
+decode_array_hash(Cache, [], _AsMapKey) ->
+  {[], Cache}.
 
 decode_array(Cache, Name, AsMapKey) ->
-  [decode(Cache, El, AsMapKey) || El <- Name].
+  lists:mapfoldl(fun(El, C) ->
+                     decode(C, El, AsMapKey)
+                 end, Cache, Name).
 
-decode_tag(Tag, Rep, _Cache) ->
+decode_tag(Tag, Rep) ->
   F = transit_read_handlers:handler(Tag),
   F(Rep).
 
@@ -114,27 +121,29 @@ decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
   case Name of
     [{Key, Val}] ->
       case decode(Cache, Key, AsMapKey) of
-        #tagged_value{tag=Tag} ->
-          DecodedVal = decode(Cache, Val, AsMapKey),
-          decode_tag(Tag, DecodedVal, AsMapKey);
-        DecodedKey ->
-          Rep = decode(Cache, Val, false),
-          [{DecodedKey, Rep}]
+        {#tagged_value{tag=Tag}, C1} ->
+          {DecodedVal, C2} = decode(C1, Val, AsMapKey),
+          {decode_tag(Tag, DecodedVal), C2};
+        {DecodedKey, C3} ->
+          {Rep, C4} = decode(C3, Val, false),
+          {[{DecodedKey, Rep}], C4}
       end;
     _ ->
       erlang:throw({"unkown hash format: ", Name})
   end;
-decode_hash(Cache, Name, AsMapKey) ->
-  [{decode(Cache, Key, AsMapKey), decode(Cache, Val, AsMapKey)} || {Key, Val} <- Name].
+decode_hash(Cache, Name, _AsMapKey) ->
+  lists:mapfoldl(fun({Key, Val}, C) ->
+                      {DKey, C1} = decode(C, Key, true),
+                      {DVal, C2} = decode(C1, Val, false),
+                      {{DKey, DVal}, C2}
+                 end, Cache, Name).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  {ok, C} = transit_rolling_cache:start(),
-  C.
+  {dict:new(), dict:new()}.
 
-stop_server(C) ->
-  ok = transit_rolling_cache:stop(C),
+stop_server(_C) ->
   ok.
 
 unmarshal_test_() ->
@@ -157,7 +166,7 @@ unmarshal_quoted(C) ->
            {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
            {[{foo, <<"bar">>}], <<"{\"~:foo\":\"bar\"}">>}
           ],
-  [fun() -> Val = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
+  [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
 parse_string_test() ->
   ?assertEqual(foo, parse_string(<<"~:foo">>, false)).
