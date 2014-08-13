@@ -19,7 +19,7 @@ erl -pa ebin deps/*/ebin
 %%% In erl shell
 > transit:start().
 %=> ok.
-> A = transit_writer:write(#{"a" => "b", 3 => 4}).
+> A = transit:write(#{"a" => "b", 3 => 4}).
 %=> <<"[\"^ \",\"a\",\"b\",3,4]">>
 > transit:read(A).
 %=> [{"a", "b"}, {3, 4}]
@@ -34,6 +34,6 @@ erl -pa ebin deps/*/ebin -transit format json_verbose
 ```erlang
 > transit:start().
 %=> ok.
-> A = transit_writer:write(#{"a" => "b", 3 => 4}).
-%=> <<"{\"a\":\"b\"}">>
+> A = transit:write(#{"a" => "b", 3 => 4}).
+%=> <<"{\"~i3\":4,\"a\":\"b\"}">>
 ```
