@@ -27,7 +27,7 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
       decode_array_hash(Cache, Tail, AsMapKey);
     [{_, _}|_] ->
       decode_hash(Cache, Name, AsMapKey);
-    [EscapedTag, Rep] ->
+    [EscapedTag, Rep] when is_bitstring(EscapedTag) ->
       <<"~", "#", Tag/binary>> = EscapedTag,
       {DRep, Cache1} = decode(Cache, Rep, AsMapKey),
       {decode_tag(Tag, DRep), Cache1};

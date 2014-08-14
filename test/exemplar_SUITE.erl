@@ -4,8 +4,11 @@
 -export([exemplar_tests/1, init_per_suite/1, end_per_suite/1]).
 
 -define(datadir, "../../transit-format/examples/0.8/simple/").
+
 -define(ArraySimple, [1,2,3]).
 -define(ArrayMixed, [0, 1, 2.0, true, false, <<"five">>, six, transit_types:symbol("seven"), <<"~eight">>, undefined]).
+-define(ArrayNested, [?ArraySimple, ?ArrayMixed]).
+-define(SmallStrings, [<<>>, <<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"abcdef">>]).
 
 all() -> [exemplar_tests].
 
@@ -30,6 +33,8 @@ exemplar_tests(Config) ->
   exemplar("vector_simple", ?ArraySimple, Dir),
   exemplar("vector_empty", [], Dir),
   exemplar("vector_mixed", ?ArrayMixed, Dir),
+  exemplar("vector_nested", ?ArrayNested, Dir),
+  exemplar("small_strings", ?SmallStrings, Dir),
   ok.
 
 exemplar(Name, Val, Dir) ->
