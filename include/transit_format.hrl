@@ -23,6 +23,7 @@
 -define(UUID, <<"u">>).
 -define(URI, <<"r">>).
 -define(Binary, <<"b">>).
+-define(Symbol, <<"$">>).
 -define(Link, <<"link">>).
 -define(Array, <<"array">>).
 -define(Map, <<"map">>).

@@ -1,17 +1,19 @@
 -module(exemplar_SUITE).
 -include_lib("common_test/include/ct.hrl").
 -export([all/0]).
--export([exemplar_tests/1, init_per_testcase/2, end_per_testcase/2]).
+-export([exemplar_tests/1, init_per_suite/1, end_per_suite/1]).
 
 -define(datadir, "../../transit-format/examples/0.8/simple/").
+-define(ArraySimple, [1,2,3]).
+-define(ArrayMixed, [0, 1, 2.0, true, false, "five", six, transit_types:symbol("seven"), "~eight", undefined]).
 
 all() -> [exemplar_tests].
 
-init_per_testcase(_, Config) ->
+init_per_suite(Config) ->
   transit:start(),
   Config.
 
-end_per_testcase(_, Config) ->
+end_per_suite(Config) ->
   transit:stop(),
   Config.
 
@@ -24,6 +26,10 @@ exemplar_tests(Config) ->
   exemplar("one", 1, Dir),
   exemplar("one_string", <<"hello">>, Dir),
   exemplar("one_keyword", hello, Dir),
+  exemplar("one_symbol", transit_types:symbol("hello"), Dir),
+  exemplar("vector_simple", ?ArraySimple, Dir),
+  exemplar("vector_empty", [], Dir),
+  %exemplar("vector_mixed", ?ArrayMixed, Dir),
   ok.
 
 exemplar(Name, Val, Dir) ->

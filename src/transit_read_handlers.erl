@@ -33,6 +33,10 @@ handler(?Keyword) ->
   fun(Rep) ->
       binary_to_atom(Rep, utf8)
   end;
+handler(?Symbol) ->
+  fun(Rep) ->
+      transit_types:symbol(Rep)
+  end;
 handler(?Date) ->
   fun(Rep) ->
       transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)))

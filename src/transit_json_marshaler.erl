@@ -137,12 +137,15 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",true]">>, true},
            {<<"[\"~#'\",false]">>, false},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
-           {<<"[\"~#'\",2.5]">>, 2.5}
+           {<<"[\"~#'\",2.5]">>, 2.5},
+           {<<"[\"~#'\",\"~~hello\"]">>, "~hello"},
+           {<<"[\"~#'\",\"~$hello\"]">>, transit_types:symbol("hello")}
           ],
   [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
 
 marshals_extend(_Env) ->
-  Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
+  Tests = [{<<"[]">>, []},
+           {<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
            {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
            {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, [{a, b}, {3, 4}]},
@@ -153,6 +156,7 @@ marshals_extend(_Env) ->
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
              [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
+           {<<"[\"~~hello\"]">>, ["~hello"]},
            {<<"[\"~rhttp://google.com\"]">>, [transit_types:uri("http://google.com")]},
            {<<"[\"~u531a379e-31bb-4ce1-8690-158dceb64be6\"]">>, [transit_types:uuid("531a379e-31bb-4ce1-8690-158dceb64be6")]},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},

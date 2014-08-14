@@ -75,6 +75,8 @@ boolean_string_rep(B) ->
 %%% List handler
 list_tag(_A) ->
   ?Array.
+list_rep(A) when is_tuple(A) ->
+  tuple_to_list(A);
 list_rep(A) ->
   A.
 list_string_rep(_A) ->
@@ -128,6 +130,8 @@ set_rep(U) ->
 set_string_rep(_) ->
   undefined.
 
+handler([]) ->
+  #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1};
 handler([{_,_},_]) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_boolean(Data) ->
@@ -157,7 +161,16 @@ handler(Data) when is_atom(Data) ->
 handler(Data) when is_record(Data, transit_datetime) ->
   #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
 handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
-  #write_handler{tag=fun(_) -> Tag end, rep=fun(_) -> Rep end, string_rep = fun(_) -> list_to_binary(Rep) end};
+  #write_handler{tag=fun(_) -> Tag end,
+                 rep=fun(_) -> Rep end,
+                 string_rep = fun(_) ->
+                                  if is_list(Rep) ->
+                                       list_to_binary(Rep);
+                                     true ->
+                                       Rep
+                                  end
+                                  end
+                };
 handler(Data) ->
   case transit_utils:is_set(Data) of
     undefined ->

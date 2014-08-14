@@ -118,6 +118,8 @@ unmarshal_quoted(C) ->
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
+           {[], <<"[]">>},
+           {transit_types:symbol(<<"hello">>), <<"[\"~#'\",\"~$hello\"]">>},
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
            %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
