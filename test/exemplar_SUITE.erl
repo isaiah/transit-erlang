@@ -10,6 +10,9 @@
 -define(ArrayNested, [?ArraySimple, ?ArrayMixed]).
 -define(SmallStrings, [<<>>, <<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"abcdef">>]).
 
+-define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 66))).
+-define(INTERESTING_INTS, lists:flatten(lists:map(fun(X) -> lists:seq(X -2, X + 2) end, ?POWER_OF_TWO))).
+
 all() -> [exemplar_tests].
 
 init_per_suite(Config) ->
@@ -35,6 +38,15 @@ exemplar_tests(Config) ->
   exemplar("vector_mixed", ?ArrayMixed, Dir),
   exemplar("vector_nested", ?ArrayNested, Dir),
   exemplar("small_strings", ?SmallStrings, Dir),
+  exemplar("strings_tilde", lists:map(fun(X) -> <<"~", X/binary>> end, ?SmallStrings), Dir),
+  exemplar("strings_hash", lists:map(fun(X) -> <<"#", X/binary>> end, ?SmallStrings), Dir),
+  exemplar("strings_hat", lists:map(fun(X) -> <<"^", X/binary>> end, ?SmallStrings), Dir),
+  exemplar("ints", lists:seq(0,127), Dir),
+  exemplar("small_ints", lists:seq(-5, 5), Dir),
+  %exemplar("ints_interesting", ?INTERESTING_INTS, Dir),
+  %exemplar("ints_interesting_neg", lists:map(fun(X) -> -X end, ?INTERESTING_INTS), Dir),
+  exemplar("doubles_small", lists:map(fun(X) -> float(X) end, lists:seq(-5, 5)), Dir),
+  %exemplar("doubles_interesting", [-3.14159, 3.14159, 4.0E11, 2.998E8, 6.626E-34], Dir),
   ok.
 
 exemplar(Name, Val, Dir) ->
