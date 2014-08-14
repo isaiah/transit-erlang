@@ -89,7 +89,7 @@ decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
           {[{DecodedKey, Rep}], C4}
       end;
     _ ->
-      erlang:throw({"unkown hash format: ", Name})
+      erlang:throw(unidentified_read)
   end;
 decode_hash(Cache, Name, _AsMapKey) ->
   lists:mapfoldl(fun({Key, Val}, C) ->

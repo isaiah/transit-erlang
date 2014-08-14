@@ -22,7 +22,7 @@ exemplar_tests(Config) ->
   exemplar("true", true, Dir),
   exemplar("zero", 0, Dir),
   exemplar("one", 1, Dir),
-  exemplar("one_string", "hello", Dir),
+  exemplar("one_string", <<"hello">>, Dir),
   exemplar("one_keyword", hello, Dir),
   ok.
 
@@ -32,6 +32,6 @@ exemplar(Name, Val, Dir) ->
                 {ok, Data} = file:read_file(File),
                 L = bit_size(Data) - 8,
                 <<D:L/binary-unit:1, _/binary>> = Data,
-                D = transit:write(Val)
-                %Val = transit:read(D)
+                D = transit:write(Val),
+                Val = transit:read(D)
             end, ["json"]).

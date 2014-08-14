@@ -93,7 +93,7 @@ emit_object(Obj, S) ->
                 true ->
                   transit_marshaler:quote_string(Obj);
                 false ->
-                  erlang:throw("don't know how to encode object.")
+                  erlang:throw(unidentified_write)
               end
          end,
   {<<Sep/bitstring, Body/bitstring>>, S1}.

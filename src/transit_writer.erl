@@ -55,7 +55,7 @@ init([Format, CustomHandler]) ->
                 msgpack ->
                   transit_msgpack_marshaler;
                 _ ->
-                  erlang:throw("unsupported marshaler: ~s", [Format])
+                  erlang:throw(unsupported_marshaler)
               end,
   {ok, #state{marshaler=Marshaler, custom_handler=CustomHandler}}.
 
