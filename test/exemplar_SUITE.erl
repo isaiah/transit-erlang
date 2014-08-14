@@ -5,7 +5,7 @@
 
 -define(datadir, "../../transit-format/examples/0.8/simple/").
 -define(ArraySimple, [1,2,3]).
--define(ArrayMixed, [0, 1, 2.0, true, false, "five", six, transit_types:symbol("seven"), "~eight", undefined]).
+-define(ArrayMixed, [0, 1, 2.0, true, false, <<"five">>, six, transit_types:symbol("seven"), <<"~eight">>, undefined]).
 
 all() -> [exemplar_tests].
 
@@ -29,7 +29,7 @@ exemplar_tests(Config) ->
   exemplar("one_symbol", transit_types:symbol("hello"), Dir),
   exemplar("vector_simple", ?ArraySimple, Dir),
   exemplar("vector_empty", [], Dir),
-  %exemplar("vector_mixed", ?ArrayMixed, Dir),
+  exemplar("vector_mixed", ?ArrayMixed, Dir),
   ok.
 
 exemplar(Name, Val, Dir) ->

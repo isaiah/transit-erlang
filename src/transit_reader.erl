@@ -34,22 +34,25 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
     _ ->
       decode_array(Cache, Name, AsMapKey)
   end;
+decode(Cache, Name, _AsMapKey) when Name =:= null ->
+  {undefined, Cache};
 decode(Cache, Name, _AsMapKey) ->
   {Name, Cache}.
 
 decode_string(Cache, String, AsMapKey) ->
   {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
-  {parse_string(OrigStr, AsMapKey), Cache1}.
+  {parse_string(OrigStr), Cache1}.
 
-parse_string(String, _Cache) ->
+parse_string(String) ->
   case String of
     <<"~",Tag:8/binary-unit:1, Rep/binary>> ->
       case transit_read_handlers:handler(Tag) of
         F when is_function(F) ->
+          io:format("~s", [String]),
           F(Rep);
         _ ->
           if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
-               [Tag|Rep];
+               <<Tag/binary,Rep/binary>>;
              Tag =:= "#" ->
                Rep;
              true ->
@@ -118,6 +121,7 @@ unmarshal_quoted(C) ->
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
+           {<<"~hello">>, <<"[\"~#'\",\"~~hello\"]">>},
            {[], <<"[]">>},
            {transit_types:symbol(<<"hello">>), <<"[\"~#'\",\"~$hello\"]">>},
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
@@ -130,6 +134,7 @@ unmarshal_quoted(C) ->
           ],
   [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
-parse_string_test() ->
-  ?assertEqual(foo, parse_string(<<"~:foo">>, false)).
+parse_string_test_() ->
+  ?_assertEqual(foo, parse_string(<<"~:foo">>)),
+  ?_assertEqual(<<"~foo">>, parse_string(<<"~~foo">>)).
 -endif.

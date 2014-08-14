@@ -52,9 +52,7 @@ handler(?VerboseDate) ->
       transit_types:datetime(transit_utils:ms_to_timestamp(Secs * 1000 + lists:last(DateTime)))
   end;
 handler(_) ->
-  fun(Rep) ->
-      Rep
-  end.
+  undefined.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
