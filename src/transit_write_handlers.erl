@@ -40,7 +40,7 @@ float_tag(_) ->
 float_rep(F) ->
   F.
 float_string_rep(F) ->
-  float_to_binary(F, [{decimals, 4},compact]).
+  transit_utils:double_to_binary(F).
 
 %%% String handler
 string_tag(_) ->

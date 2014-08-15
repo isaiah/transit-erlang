@@ -94,6 +94,6 @@ marshals_extend(_Env) ->
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
-           {<<"{\"~f3.5\":4.1}">>, #{3.5 => 4.1}}],
+           {<<"{\"~d3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
 -endif.

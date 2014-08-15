@@ -14,7 +14,7 @@
 -define(Null, <<"_">>).
 -define(Int, <<"i">>).
 -define(BigInt, <<"n">>).
--define(Float, <<"f">>).
+-define(Float, <<"d">>).
 -define(String, <<"s">>).
 -define(Boolean, <<"?">>).
 -define(Keyword, <<":">>).

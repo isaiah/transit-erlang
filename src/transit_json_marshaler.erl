@@ -85,7 +85,7 @@ emit_object(Obj, S) ->
             is_integer(Obj) ->
               integer_to_binary(Obj);
             is_float(Obj) ->
-              float_to_binary(Obj, [{decimals, 4},compact]);
+              transit_utils:double_to_binary(Obj);
             is_atom(Obj) ->
               case Obj of
                 undefined ->
@@ -143,6 +143,7 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",false]">>, false},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~#'\",2.5]">>, 2.5},
+           {<<"[\"~#'\",2.998e8]">>, 2.998E8},
            {<<"[\"~#'\",9007199254740992]">>,9007199254740992},
            {<<"[\"~#'\",\"~i9007199254740993\"]">>,9007199254740993},
            {<<"[\"~#'\",\"~n1\"]">>,transit_types:bigint(1)},

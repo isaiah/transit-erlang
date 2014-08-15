@@ -60,7 +60,7 @@ exemplar_tests(Config) ->
   %exemplar("ints_interesting", ?INTERESTING_INTS, Dir),
   %exemplar("ints_interesting_neg", lists:map(fun(X) -> -X end, ?INTERESTING_INTS), Dir),
   exemplar("doubles_small", lists:map(fun(X) -> float(X) end, lists:seq(-5, 5)), Dir),
-  %exemplar("doubles_interesting", [-3.14159, 3.14159, 4.0E11, 2.998E8, 6.626E-34], Dir),
+  exemplar("doubles_interesting", [-3.14159, 3.14159, 4.0E11, 2.998E8, 6.626E-34], Dir),
   exemplar("one_uuid", lists:nth(1, ?UUIDS), Dir),
   exemplar("uuids", ?UUIDS, Dir),
   exemplar("one_uri", lists:nth(1, ?URIS), Dir),

@@ -3,6 +3,7 @@
 -export([iso_8601_fmt/1]).
 -export([ms_to_date/1]).
 -export([ms_to_timestamp/1]).
+-export([double_to_binary/1]).
 
 is_set(Data) ->
   case ordsets:is_set(Data) of
@@ -39,3 +40,10 @@ ms_to_timestamp(Milliseconds) ->
   {Milliseconds div 1000000000,
    Milliseconds div 10000 rem 100000,
    Milliseconds rem 10000}.
+
+double_to_binary(Double) ->
+  [Rep] = io_lib:format("~w", [Double]),
+  list_to_binary(Rep).
+  %float_to_binary(F, [{decimals, 4},compact]).
+
+
