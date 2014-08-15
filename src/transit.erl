@@ -1,27 +1,8 @@
 -module(transit).
--behaviour(application).
-%% Application callbacks
--export([start/2, stop/1]).
--export([start/0, stop/ 0, write/1, read/1]).
+-export([write/2, read/2]).
 
-start() ->
-  application:start(transit).
+read(Rep, Opts) ->
+  transit_reader:read(Rep, Opts).
 
-stop() ->
-  application:stop(transit).
-
-read(Rep) ->
-  transit_reader:read(Rep).
-
-write(Rep) ->
-  transit_writer:write(Rep).
-
-%% ===================================================================
-%% Application callbacks
-%% ===================================================================
-
-start(_StartType, _StartArgs) ->
-  transit_sup:start_link().
-
-stop(_State) ->
-  ok.
+write(Rep, Opts) ->
+  transit_writer:write(Rep, Opts).

@@ -6,9 +6,7 @@
 all() -> [continuous_write].
 
 continuous_write(_Config) ->
-  transit:start(),
   Tests = [{<<"[\"~#'\",1]">>, 1},
            {<<"[\"~#'\",1]">>, 1}
           ],
-  [Rep = transit:write(Val) || {Rep, Val} <- Tests],
-  transit:stop().
+  [Rep = transit:write(Val, [{format, json}, {handler, ?MODULE}]) || {Rep, Val} <- Tests].

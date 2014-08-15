@@ -172,11 +172,11 @@ marshal_top(M, Object, CustomHandler) ->
   Handler = find_handler(Object, M, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
-  Ret = if bit_size(Tag) =:= 8 ->
-             M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
-           true ->
-             marshal(M, Object, Env)
-        end,
+  {Ret, _Env} = if bit_size(Tag) =:= 8 ->
+                     M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
+                   true ->
+                     marshal(M, Object, Env)
+                end,
   Ret.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().

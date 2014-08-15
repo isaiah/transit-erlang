@@ -2,11 +2,11 @@
  [
   {description, "transit-format implementation for erlang."},
   {vsn, "0.8.1"},
-  {registered, [transit_sup, transit_writer, transit_reader]},
+  {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
   {mod, { transit, []}},
-  {env, [{format, json}, {write_handler, undefined}]}
+  {env, []}
  ]}.

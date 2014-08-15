@@ -29,11 +29,9 @@
 all() -> [exemplar_tests].
 
 init_per_suite(Config) ->
-  transit:start(),
   Config.
 
 end_per_suite(Config) ->
-  transit:stop(),
   Config.
 
 exemplar_tests(Config) ->
@@ -70,10 +68,10 @@ exemplar_tests(Config) ->
 
 exemplar(Name, Val, Dir) ->
   lists:map(fun(Ext) ->
-                File = filename:join(Dir, Name ++ "." ++ Ext),
+                File = filename:join(Dir, Name ++ "." ++ atom_to_list(Ext)),
                 {ok, Data} = file:read_file(File),
                 L = bit_size(Data) - 8,
                 <<D:L/binary-unit:1, _/binary>> = Data,
-                D = transit:write(Val),
-                Val = transit:read(D)
-            end, ["json"]).
+                D = transit:write(Val, [{format,Ext}]),
+                Val = transit:read(D, [{format, Ext}])
+            end, [json]).

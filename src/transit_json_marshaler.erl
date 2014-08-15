@@ -175,5 +175,5 @@ marshals_extend(_Env) ->
            {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary("c3VyZS4=")]},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
           ],
-  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
+  [fun() -> Res = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
 -endif.

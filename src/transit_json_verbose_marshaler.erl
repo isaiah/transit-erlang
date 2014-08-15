@@ -73,7 +73,7 @@ handler(_) -> undefined.
 start_server() ->
   transit_marshaler:new_env().
 
-stop_server(Env) ->
+stop_server(_Env) ->
   ok.
 
 marshals_extention_test_() ->
@@ -95,5 +95,5 @@ marshals_extend(_Env) ->
            {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
            {<<"{\"~d3.5\":4.1}">>, #{3.5 => 4.1}}],
-  [fun() -> {Res, _} = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
+  [fun() -> Res = transit_marshaler:marshal_top(?MODULE, Rep, ?MODULE) end || {Res, Rep} <- Tests].
 -endif.

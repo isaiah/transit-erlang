@@ -5,13 +5,13 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([read/1]).
+-export([read/2]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-read(Name) ->
+read(Name, _Opts) ->
   Cache = {dict:new(), dict:new()},
   {Val, _Cache} = decode(Cache, jsx:decode(Name), false),
   Val.
