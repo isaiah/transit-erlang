@@ -16,16 +16,12 @@ erl -pa ebin deps/*/ebin
 ```
 
 ```erlang
-%%% In erl shell
-> A = transit:write(#{"a" => "b", 3 => 4}, [{format, json}]).
-%=> <<"[\"^ \",\"a\",\"b\",3,4]">>
-> transit:read(A, [{format, json}]).
-%=> [{"a", "b"}, {3, 4}]
-```
+A = transit:write(#{"a" => "b", 3 => 4}, [{format, json}]).
+%% => <<"[\"^ \",\"a\",\"b\",3,4]">>
+transit:read(A, [{format, json}]).
+%% => [{"a", "b"}, {3, 4}]
 
-JSON verbose mode
-
-```erlang
-> A = transit:write(#{"a" => "b", 3 => 4}, [{format, json_verbose}]).
-%=> <<"{\"~i3\":4,\"a\":\"b\"}">>
+%%% JSON Verbose mode
+A = transit:write(#{"a" => "b", 3 => 4}, [{format, json_verbose}]).
+%% => <<"{\"~i3\":4,\"a\":\"b\"}">>
 ```
