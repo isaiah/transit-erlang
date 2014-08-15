@@ -7,6 +7,9 @@
          emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2,
          handler/1]).
 
+-define(MAX_INT, 9007199254740993). % math:pow(2, 63)
+-define(MIN_INT, -9007199254740993). % -math:pow(2, 63)
+
 emit_null(_Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
@@ -23,6 +26,8 @@ emit_boolean(Rep, Env) ->
       emit_object(Rep, Env)
   end.
 
+emit_int(Rep, Env) when is_integer(Rep), Rep =< ?MIN_INT; is_integer(Rep), Rep >= ?MAX_INT ->
+  emit_string(<<?ESC/bitstring, ?Int/bitstring>>, integer_to_binary(Rep), Env);
 emit_int(Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
@@ -138,6 +143,10 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",false]">>, false},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~#'\",2.5]">>, 2.5},
+           {<<"[\"~#'\",9007199254740992]">>,9007199254740992},
+           {<<"[\"~#'\",\"~i9007199254740993\"]">>,9007199254740993},
+           {<<"[\"~#'\",\"~n1\"]">>,transit_types:bigint(1)},
+           %{<<"[\"~#'\",\"~n9223372036854775806\"]">>,9223372036854775806},
            {<<"[\"~#'\",\"~~hello\"]">>, "~hello"},
            {<<"[\"~#'\",\"~$hello\"]">>, transit_types:symbol("hello")}
           ],

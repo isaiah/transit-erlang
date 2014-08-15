@@ -36,6 +36,6 @@ ms_to_date(Milliseconds) ->
    calendar:gregorian_seconds_to_datetime(Seconds).
 
 ms_to_timestamp(Milliseconds) ->
-  {Milliseconds div 1000000000000,
-   Milliseconds div 1000000 rem 1000000,
-   Milliseconds rem 1000000}.
+  {Milliseconds div 1000000000,
+   Milliseconds div 10000 rem 100000,
+   Milliseconds rem 10000}.
