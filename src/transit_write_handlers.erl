@@ -72,14 +72,12 @@ boolean_string_rep(B) ->
       <<"f">>
   end.
 
-%%% List handler
-list_tag(_A) ->
+%%% Array (which is list in erlang) handler
+array_tag(_A) ->
   ?Array.
-list_rep(A) when is_tuple(A) ->
-  tuple_to_list(A);
-list_rep(A) ->
+array_rep(A) ->
   A.
-list_string_rep(_A) ->
+array_string_rep(_A) ->
   undefined.
 
 %%% Map handler
@@ -131,7 +129,7 @@ set_string_rep(_) ->
   undefined.
 
 handler([]) ->
-  #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1};
+  #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1};
 handler([{_,_},_]) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_boolean(Data) ->
@@ -145,7 +143,7 @@ handler(Data) when is_list(Data) ->
     true ->
       #write_handler{tag = fun string_tag/1, rep = fun string_rep/1, string_rep = fun string_string_rep/1};
     false ->
-      #write_handler{tag = fun list_tag/1, rep = fun list_rep/1, string_rep = fun list_string_rep/1}
+      #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1}
   end;
 handler(Data) when is_bitstring(Data) ->
   #write_handler{tag = fun bitstring_tag/1, rep = fun bitstring_rep/1, string_rep = fun bitstring_string_rep/1};

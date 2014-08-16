@@ -24,8 +24,9 @@
 -define(URI, <<"r">>).
 -define(Binary, <<"b">>).
 -define(Symbol, <<"$">>).
--define(Link, <<"link">>).
 -define(Array, <<"array">>).
+-define(Link, <<"link">>).
+-define(List, <<"list">>).
 -define(Map, <<"map">>).
 -define(Set, <<"set">>).
 
