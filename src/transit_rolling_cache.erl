@@ -11,8 +11,10 @@ encode(Cache, Name, AsMapKey) ->
   encode_with_cache(Name, AsMapKey, Cache).
 
 decode(C={Kv, _}, Name, AsMapKey) ->
+  io:format("decode: ~s-~p~n", [Name,AsMapKey]),
   case is_cache_key(Name) of
     true ->
+      io:format("is_cache_key: ~s~n", [Name]),
       case dict:find(Name, Kv) of
         {ok, Val} ->
           {Val, C};
@@ -36,15 +38,14 @@ decode(C={Kv, _}, Name, AsMapKey) ->
   end.
 
 -spec is_cache_key(bitstring()) -> boolean().
-is_cache_key(Name) when bit_size(Name) > 16 ->
-  <<Sub, Ext, _Tail/binary>> = Name,
-  case Sub of
-    $~ ->
-      case Ext of
-        32 -> false; %%% space
-        _ -> true
-      end;
-    _ -> false
+is_cache_key(Name) when bit_size(Name) >= 16 ->
+  case Name of
+    <<"^ ", _Tail/binary>> ->
+      false;
+    <<"^", _Tail/binary>> ->
+      true;
+    _ ->
+      false
   end;
 is_cache_key(_) ->
   false.
@@ -119,6 +120,7 @@ encode_with_cache(Name, AsMapKey, C={Kv, _}) ->
 -include_lib("eunit/include/eunit.hrl").
 
 is_cache_key_test_() ->
+  ?_assert(is_cache_key(<<"^0">>)),
   ?_assert(is_cache_key(<<"^123">>)),
   ?_assertNot(is_cache_key(<<"^ 123">>)),
   ?_assertNot(is_cache_key(<<"123">>)),
@@ -134,4 +136,12 @@ is_cacheable_test_() ->
 encache_test() ->
   {_, C} = encache(<<"foobar">>, {dict:new(), dict:new()}),
   {<<"^0">>, _} = encode_with_cache(<<"foobar">>, true, C).
+
+decode_test() ->
+  Val = <<"~#list">>,
+  Cache = {dict:new(), dict:new()},
+  {_, C={Kv,_}} = decode(Cache, Val, false),
+  io:format("Key2Val: ~p~n", [Kv]),
+  Key = <<"^0">>,
+  {Val, _} = decode(C, Key, false).
 -endif.

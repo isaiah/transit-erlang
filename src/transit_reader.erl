@@ -28,9 +28,14 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
     [{_, _}|_] ->
       decode_hash(Cache, Name, AsMapKey);
     [EscapedTag, Rep] when is_bitstring(EscapedTag) ->
-      <<"~", "#", Tag/binary>> = EscapedTag,
-      {DRep, Cache1} = decode(Cache, Rep, AsMapKey),
-      {decode_tag(Tag, DRep), Cache1};
+      {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
+      case OrigTag of
+        <<"~", "#", Tag/binary>> ->
+          {DRep, C1} = decode(C, Rep, AsMapKey),
+          {decode_tag(Tag, DRep), C1};
+        _ ->
+          erlang:throw(unknown_tag)
+      end;
     _ ->
       decode_array(Cache, Name, AsMapKey)
   end;
@@ -48,7 +53,6 @@ parse_string(String) ->
     <<"~",Tag:8/binary-unit:1, Rep/binary>> ->
       case transit_read_handlers:handler(Tag) of
         F when is_function(F) ->
-          io:format("~s", [String]),
           F(Rep);
         _ ->
           if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->

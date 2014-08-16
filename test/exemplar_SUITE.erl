@@ -49,11 +49,11 @@
 -define(SmallStrings, [<<>>, <<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"abcdef">>]).
 -define(SetSimple, sets:from_list(?ArraySimple)).
 -define(SetMixed, sets:from_list(?ArrayMixed)).
--define(SetNested, sets:from_list(?ArrayNested)).
+-define(SetNested, sets:from_list([sets:from_list(?ArraySimple), sets:from_list(?ArrayMixed)])).
 
 -define(ListSimple, transit_types:list(?ArraySimple)).
 -define(ListMixed, transit_types:list(?ArrayMixed)).
--define(ListNested, transit_types:list(?ArrayNested)).
+-define(ListNested, transit_types:list([transit_types:list(?ArraySimple), transit_types:list(?ArrayMixed)])).
 
 -define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 66))).
 -define(INTERESTING_INTS, lists:flatten(lists:map(fun(X) -> lists:seq(X -2, X + 2) end, ?POWER_OF_TWO))).
