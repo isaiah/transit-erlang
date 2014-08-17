@@ -1,6 +1,6 @@
 -module(exemplar_SUITE).
 -include_lib("common_test/include/ct.hrl").
--export([all/0]).
+-export([all/0, groups/0, suite/0]).
 
 %%% exemplar tests
 -export([nil_exemplar/1,
@@ -75,42 +75,53 @@
 -define(KEYWORDS, [a, ab, abc, abcd, abcde, a1, b2, c3, 'a_b']).
 -define(SYMBOLS, lists:map(fun(X) -> transit_types:symbol(list_to_binary(atom_to_list(X))) end, ?KEYWORDS)).
 
-all() -> [nil_exemplar,
-          false_exemplar,
-          true_exemplar,
-          zero_exemplar,
-          one_exemplar,
-          one_string_exemplar,
-          one_keyword_exemplar,
-          one_symbol_exemplar,
-          one_date_exemplar,
-          vector_simple_exemplar,
-          vector_empty_exemplar,
-          vector_mixed_exemplar,
-          vector_nested_exemplar,
-          small_strings_exemplar,
-          strings_tilde_exemplar,
-          strings_hash_exemplar,
-          strings_hat_exemplar,
-          ints_exemplar,
-          small_ints_exemplar,
-          doubles_small_exemplar,
-          doubles_interesting_exemplar,
-          one_uuid_exemplar,
-          uuids_exemplar,
-          one_uri_exemplar,
-          uris_exemplar,
-          symbols_exemplar,
-          keywords_exemplar,
-          list_simple_exemplar,
-          list_empty_exemplar,
-          list_mixed_exemplar,
-          list_nested_exemplar,
-          set_simple_exemplar,
-          set_empty_exemplar,
-          set_mixed_exemplar,
-          set_nested_exemplar
-         ].
+suite() ->
+    [{timetrap, {seconds, 20}}].
+
+groups() -> [
+    {ones, [parallel],
+        [nil_exemplar,
+               false_exemplar,
+               true_exemplar,
+               zero_exemplar,
+               one_uri_exemplar,
+               one_exemplar,
+               one_string_exemplar,
+               one_keyword_exemplar,
+               one_symbol_exemplar,
+               one_date_exemplar]},
+          {vectors, [parallel],
+              [vector_simple_exemplar,
+               vector_empty_exemplar,
+               vector_mixed_exemplar,
+               vector_nested_exemplar,
+               small_strings_exemplar,
+               strings_tilde_exemplar,
+               strings_hash_exemplar,
+               strings_hat_exemplar,
+               ints_exemplar,
+               small_ints_exemplar,
+               doubles_small_exemplar,
+               doubles_interesting_exemplar,
+               one_uuid_exemplar,
+              uris_exemplar,
+              symbols_exemplar,
+              keywords_exemplar,
+              uuids_exemplar]},
+          {composite_extensions, [parallel],
+              [list_simple_exemplar,
+               list_empty_exemplar,
+               list_mixed_exemplar,
+               list_nested_exemplar,
+               set_simple_exemplar,
+               set_empty_exemplar,
+               set_mixed_exemplar,
+               set_nested_exemplar]} ].
+
+all() ->
+    [{group, ones},
+     {group, vectors},
+     {group, composite_extensions}].
 
 nil_exemplar(Conf) ->
   exemplar("nil", undefined, Conf).
