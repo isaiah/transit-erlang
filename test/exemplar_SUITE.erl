@@ -69,7 +69,7 @@
 %-define(MapMixed, [{a,1}, {b, <<"a string"/utf8>>}, {c, true}]).
 %-define(MapNested, [{simple, ?MapSimple}, {mixed, ?MapMixed}]).
 
--define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 66))).
+-define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 65))).
 -define(INTERESTING_INTS, lists:flatten(lists:map(fun(X) -> lists:seq(X -2, X + 2) end, ?POWER_OF_TWO))).
 
 -define(UUIDS, [transit_types:uuid(<<"5a2cbea3-e8c6-428b-b525-21239370dd55">>),
@@ -185,6 +185,7 @@ small_ints_exemplar(Conf) ->
 ints_interesting_exemplar(Conf) ->
   exemplar("ints_interesting", ?INTERESTING_INTS, Conf).
 ints_interesting_neg_exemplar(Conf) ->
+  %ct:pal("~p~n", [lists:map(fun(X) -> -X end, ?INTERESTING_INTS)]),
   exemplar("ints_interesting_neg", lists:map(fun(X) -> -X end, ?INTERESTING_INTS), Conf).
 doubles_small_exemplar(Conf) ->
   exemplar("doubles_small", lists:map(fun(X) -> float(X) end, lists:seq(-5, 5)), Conf).
@@ -232,7 +233,20 @@ map_string_keys_exemplar(Conf) ->
 map_numeric_keys_exemplar(Conf) ->
   exemplar("map_numeric_keys", #{1 => <<"one">>, 2 => <<"two">>}, Conf).
 %map_vector_keys_exemplar(Conf) -> ok.
-
+compare({[],[]}) -> ok;
+compare({[H1|T1], [H2|T2]}) ->
+  if H1 =:= H2 ->
+       compare({T1,T2});
+     true ->
+       ct:pal("integer: ~p, ~p", [is_integer(H1), is_integer(H2)]),
+       ct:pal("float: ~p, ~p", [is_float(H1), is_float(H2)]),
+       ct:pal("gt: ~p", [H1 > H2]),
+       ct:pal("lt: ~p", [H1 < H2]),
+       ct:pal("eq: ~p", [H1 == H2]),
+       ct:pal("diff: h1 ~w h2 ~w", [H2, H1]),
+       ct:pal("diff: h1 ~s h2 ~s", [integer_to_list(H2), integer_to_list(H1)]),
+       erlang:throw(element_diff)
+  end.
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),
   lists:map(fun(Ext) ->
@@ -241,8 +255,12 @@ exemplar(Name, Val, Config) ->
                 L = bit_size(Data) - 8,
                 <<D:L/binary-unit:1, _/binary>> = Data,
                 % Test read
-                Val = transit:read(D, [{format, Ext}]),
-                %% Test reencode
-                S = transit:write(Val, [{format,Ext}]),
-                Val = transit:read(S, [{format,Ext}])
+                Val1 = transit:read(D, [{format, Ext}]),
+                if Val1 =/= Val ->
+                     compare({Val, Val1});
+                   true ->
+                     %% Test reencode
+                     S = transit:write(Val, [{format,Ext}]),
+                     Val = transit:read(S, [{format,Ext}])
+                end
             end, [json]).
