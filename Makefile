@@ -36,3 +36,7 @@ build-plt: compile
 dialyze:
 	@dialyzer --src src --no_native $(DIALYZER_OPTS)
 
+default: test
+
+clean:
+	rebar clean

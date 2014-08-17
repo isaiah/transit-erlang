@@ -11,10 +11,8 @@ encode(Cache, Name, AsMapKey) ->
   encode_with_cache(Name, AsMapKey, Cache).
 
 decode(C={Kv, _}, Name, AsMapKey) ->
-  io:format("decode: ~s-~p~n", [Name,AsMapKey]),
   case is_cache_key(Name) of
     true ->
-      io:format("is_cache_key: ~s~n", [Name]),
       case dict:find(Name, Kv) of
         {ok, Val} ->
           {Val, C};
@@ -141,7 +139,6 @@ decode_test() ->
   Val = <<"~#list">>,
   Cache = {dict:new(), dict:new()},
   {_, C={Kv,_}} = decode(Cache, Val, false),
-  io:format("Key2Val: ~p~n", [Kv]),
   Key = <<"^0">>,
   {Val, _} = decode(C, Key, false).
 -endif.

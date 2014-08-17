@@ -13,9 +13,9 @@ handler(?Boolean) ->
     end
   end;
 handler(?Int) ->
-  list_to_liteger;
+  fun binary_to_integer/1;
 handler(?Float) ->
-  list_to_float;
+  fun binary_to_float/1;
 handler(?QUOTE) ->
   fun(Rep) ->
       case Rep of
