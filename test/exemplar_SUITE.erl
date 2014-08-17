@@ -22,6 +22,8 @@
          strings_hat_exemplar/1,
          ints_exemplar/1,
          small_ints_exemplar/1,
+         ints_interesting_exemplar/1,
+         ints_interesting_neg_exemplar/1,
          doubles_small_exemplar/1,
          doubles_interesting_exemplar/1,
          one_uuid_exemplar/1,
@@ -37,7 +39,12 @@
          set_simple_exemplar/1,
          set_empty_exemplar/1,
          set_mixed_exemplar/1,
-         set_nested_exemplar/1
+         set_nested_exemplar/1,
+         map_simple_exemplar/1,
+         map_mixed_exemplar/1,
+         map_nested_exemplar/1,
+         map_string_keys_exemplar/1,
+         map_numeric_keys_exemplar/1
         ]).
 
 
@@ -54,6 +61,13 @@
 -define(ListSimple, transit_types:list(?ArraySimple)).
 -define(ListMixed, transit_types:list(?ArrayMixed)).
 -define(ListNested, transit_types:list([transit_types:list(?ArraySimple), transit_types:list(?ArrayMixed)])).
+
+-define(MapSimple, #{a => 1, b => 2, c => 3}).
+-define(MapMixed, #{a => 1, b => <<"a string"/utf8>>, c => true}).
+-define(MapNested, #{simple => ?MapSimple, mixed => ?MapMixed}).
+%-define(MapSimple, [{a,1},{b,2},{c,3}]).
+%-define(MapMixed, [{a,1}, {b, <<"a string"/utf8>>}, {c, true}]).
+%-define(MapNested, [{simple, ?MapSimple}, {mixed, ?MapMixed}]).
 
 -define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 66))).
 -define(INTERESTING_INTS, lists:flatten(lists:map(fun(X) -> lists:seq(X -2, X + 2) end, ?POWER_OF_TWO))).
@@ -101,6 +115,8 @@ groups() -> [
                strings_hat_exemplar,
                ints_exemplar,
                small_ints_exemplar,
+               ints_interesting_exemplar,
+               ints_interesting_neg_exemplar,
                doubles_small_exemplar,
                doubles_interesting_exemplar,
                one_uuid_exemplar,
@@ -116,13 +132,18 @@ groups() -> [
                set_simple_exemplar,
                set_empty_exemplar,
                set_mixed_exemplar,
-               set_nested_exemplar]} ].
+               set_nested_exemplar,
+               map_simple_exemplar,
+               map_mixed_exemplar,
+               map_nested_exemplar,
+               map_string_keys_exemplar,
+               map_numeric_keys_exemplar
+              ]} ].
 
 all() ->
     [{group, ones},
      {group, vectors},
      {group, composite_extensions}].
-
 nil_exemplar(Conf) ->
   exemplar("nil", undefined, Conf).
 false_exemplar(Conf) ->
@@ -161,8 +182,10 @@ ints_exemplar(Conf) ->
   exemplar("ints", lists:seq(0,127), Conf).
 small_ints_exemplar(Conf) ->
   exemplar("small_ints", lists:seq(-5, 5), Conf).
-  %exemplar("ints_interesting", ?INTERESTING_INTS, Conf),
-  %exemplar("ints_interesting_neg", lists:map(fun(X) -> -X end, ?INTERESTING_INTS), Conf),
+ints_interesting_exemplar(Conf) ->
+  exemplar("ints_interesting", ?INTERESTING_INTS, Conf).
+ints_interesting_neg_exemplar(Conf) ->
+  exemplar("ints_interesting_neg", lists:map(fun(X) -> -X end, ?INTERESTING_INTS), Conf).
 doubles_small_exemplar(Conf) ->
   exemplar("doubles_small", lists:map(fun(X) -> float(X) end, lists:seq(-5, 5)), Conf).
 doubles_interesting_exemplar(Conf) ->
@@ -198,7 +221,17 @@ set_mixed_exemplar(Conf) ->
 set_nested_exemplar(Conf) ->
   exemplar("set_nested", ?SetNested, Conf).
 
-
+map_simple_exemplar(Conf) ->
+  exemplar("map_simple", ?MapSimple, Conf).
+map_mixed_exemplar(Conf) ->
+  exemplar("map_mixed", ?MapMixed, Conf).
+map_nested_exemplar(Conf) ->
+  exemplar("map_nested", ?MapNested, Conf).
+map_string_keys_exemplar(Conf) ->
+  exemplar("map_string_keys", #{<<"first">> => 1, <<"second">> => 2, <<"third">> => 3}, Conf).
+map_numeric_keys_exemplar(Conf) ->
+  exemplar("map_numeric_keys", #{1 => <<"one">>, 2 => <<"two">>}, Conf).
+%map_vector_keys_exemplar(Conf) -> ok.
 
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),

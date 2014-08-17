@@ -24,9 +24,9 @@ decode(Cache, Name, AsMapKey) when is_bitstring(Name) ->
 decode(Cache, Name, AsMapKey) when is_list(Name) ->
   case Name of
     [?MAP_AS_ARR|Tail] ->
-      decode_array_hash(Cache, Tail, AsMapKey);
+      map_rep(decode_array_hash(Cache, Tail, AsMapKey));
     [{_, _}|_] ->
-      decode_hash(Cache, Name, AsMapKey);
+      map_rep(decode_hash(Cache, Name, AsMapKey));
     [EscapedTag, Rep] when is_bitstring(EscapedTag) ->
       {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
       case OrigTag of
@@ -105,6 +105,14 @@ decode_hash(Cache, Name, _AsMapKey) ->
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
 
+-ifdef(maps_support).
+map_rep({List, C}) ->
+  {maps:from_list(List), C}.
+-else.
+map_rep(Ret) ->
+  Ret.
+-endif.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
@@ -131,10 +139,10 @@ unmarshal_quoted(C) ->
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
            %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
-           {[{<<"foo">>, <<"bar">>}], <<"{\"foo\":\"bar\"}">>},
-           {[{<<"a">>, <<"b">>}, {3, 4}], <<"[\"^ \",\"a\",\"b\",3,4]">>},
-           {[{a, b}, {3, 4}], <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
-           {[{foo, <<"bar">>}], <<"{\"~:foo\":\"bar\"}">>}
+           {maps:from_list([{<<"foo">>, <<"bar">>}]), <<"{\"foo\":\"bar\"}">>},
+           {maps:from_list([{<<"a">>, <<"b">>}, {3, 4}]), <<"[\"^ \",\"a\",\"b\",3,4]">>},
+           {maps:from_list([{a, b}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
+           {maps:from_list([{foo, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}
           ],
   [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
