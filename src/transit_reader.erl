@@ -24,9 +24,11 @@ decode(Cache, Name, AsMapKey) when is_bitstring(Name) ->
 decode(Cache, Name, AsMapKey) when is_list(Name) ->
   case Name of
     [?MAP_AS_ARR|Tail] ->
-      map_rep(decode_array_hash(Cache, Tail, AsMapKey));
+      {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
+      {transit_utils:map_rep(L), C};
     [{_, _}|_] ->
-      map_rep(decode_hash(Cache, Name, AsMapKey));
+      {L, C} = decode_hash(Cache, Name, AsMapKey),
+      {transit_utils:map_rep(L), C};
     [EscapedTag, Rep] when is_bitstring(EscapedTag) ->
       {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
       case OrigTag of
@@ -104,14 +106,6 @@ decode_hash(Cache, Name, _AsMapKey) ->
                       {DVal, C2} = decode(C1, Val, false),
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
-
--ifdef(maps_support).
-map_rep({List, C}) ->
-  {maps:from_list(List), C}.
--else.
-map_rep(Ret) ->
-  Ret.
--endif.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

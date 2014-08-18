@@ -4,6 +4,7 @@
 -export([ms_to_date/1]).
 -export([ms_to_timestamp/1]).
 -export([double_to_binary/1]).
+-export([map_rep/1]).
 
 is_set(Data) ->
   case ordsets:is_set(Data) of
@@ -46,4 +47,10 @@ double_to_binary(Double) ->
   list_to_binary(Rep).
   %float_to_binary(F, [{decimals, 4},compact]).
 
-
+-ifdef(maps_support).
+map_rep(PropList) ->
+  maps:from_list(PropList).
+-else.
+map_rep(Ret) ->
+  Ret.
+-endif.
