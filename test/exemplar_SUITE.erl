@@ -44,7 +44,8 @@
          map_mixed_exemplar/1,
          map_nested_exemplar/1,
          map_string_keys_exemplar/1,
-         map_numeric_keys_exemplar/1
+         map_numeric_keys_exemplar/1,
+         map_vector_keys_exemplar/1
         ]).
 
 
@@ -115,8 +116,8 @@ groups() -> [
                strings_hat_exemplar,
                ints_exemplar,
                small_ints_exemplar,
-               ints_interesting_exemplar,
-               ints_interesting_neg_exemplar,
+               %ints_interesting_exemplar,
+               %ints_interesting_neg_exemplar,
                doubles_small_exemplar,
                doubles_interesting_exemplar,
                one_uuid_exemplar,
@@ -137,7 +138,8 @@ groups() -> [
                map_mixed_exemplar,
                map_nested_exemplar,
                map_string_keys_exemplar,
-               map_numeric_keys_exemplar
+               map_numeric_keys_exemplar,
+               map_vector_keys_exemplar
               ]} ].
 
 all() ->
@@ -231,7 +233,8 @@ map_string_keys_exemplar(Conf) ->
   exemplar("map_string_keys", #{<<"first">> => 1, <<"second">> => 2, <<"third">> => 3}, Conf).
 map_numeric_keys_exemplar(Conf) ->
   exemplar("map_numeric_keys", #{1 => <<"one">>, 2 => <<"two">>}, Conf).
-%map_vector_keys_exemplar(Conf) -> ok.
+map_vector_keys_exemplar(Conf) ->
+  exemplar("map_vector_keys", #{[1,1] => <<"one">>, [2, 2] => <<"two">>}, Conf).
 
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),

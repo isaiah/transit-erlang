@@ -41,12 +41,16 @@
   {Rep, Env}
     when Rep::term(), Env::env().
 
+-callback emit_cmap(Rep, Env) ->
+  {Rep, Env}
+    when Rep::term(), Env::env().
+
 -callback emit_string(Tag, Rep, Env) ->
   {Rep, Env}
     when Tag::bitstring(), Rep::bitstring(), Env::env().
 
 -callback handler(Obj) ->
-  Handler when Obj::term(), Handler::transit_writer_handlers:writer_handler().
+  Handler when Obj::term(), Handler::transit_write_handlers:writer_handler().
 
 %%% flatten R17 map
 flatten_map(M) when is_map(M) ->
@@ -203,7 +207,12 @@ marshal(Name, Obj, S) ->
     ?Array ->
       Name:emit_array(Rep, S);
     ?Map ->
-      Name:emit_map(Rep, S);
+      case stringable_keys(Rep) of
+        true ->
+          Name:emit_map(Rep, S);
+        false ->
+          Name:emit_cmap(Rep, S)
+      end;
     ?String when is_bitstring(Rep) ->
       Name:emit_string(<<>>, Rep, S);
     ?String ->
@@ -231,6 +240,20 @@ new_env() ->
 new_env(CustomHandler) ->
   Env = new_env(),
   Env#env{custom_handler=CustomHandler}.
+
+stringable_keys(Rep) when is_map(Rep) ->
+  lists:all(fun(X) ->
+                bit_size(transit_write_handlers:tag(X)) =:= 8
+            end, maps:keys(Rep));
+stringable_keys([]) ->
+  true;
+stringable_keys([{K, _}|T]) ->
+  case bit_size(transit_write_handlers:tag(K)) =:= 8 of
+    true ->
+      stringable_keys(T);
+    false ->
+      false
+  end.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

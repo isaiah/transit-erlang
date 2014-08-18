@@ -3,6 +3,10 @@
 
 -include_lib("transit_format.hrl").
 
+handler(?CMap) ->
+  fun(Rep) ->
+      transit_utils:map_rep(list_to_proplist(Rep))
+  end;
 handler(?Null) ->
   fun(_) -> undefined end;
 handler(?Boolean) ->
@@ -45,6 +49,7 @@ handler(?Date) ->
   fun(Rep) ->
       transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)))
   end;
+
 handler(?VerboseDate) ->
   fun(Rep) ->
       <<Y:8/binary-unit:4,"-",MM:8/binary-unit:2,"-",D:8/binary-unit:2,"T",H:8/binary-unit:2,":",M:8/binary-unit:2,":",S:8/binary-unit:2,".",MS:8/binary-unit:3,"Z">> = Rep,
@@ -57,6 +62,9 @@ handler(?VerboseDate) ->
   end;
 handler(_) ->
   undefined.
+
+list_to_proplist([]) -> [];
+list_to_proplist([K,V|Tail]) -> [{K,V}|list_to_proplist(Tail)].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

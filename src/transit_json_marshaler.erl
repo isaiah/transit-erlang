@@ -5,7 +5,7 @@
 
 -export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2, emit_string/3,
          emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2,
-         handler/1]).
+         emit_cmap/2, handler/1]).
 
 -define(MAX_INT, 9007199254740993). % math:pow(2, 63)
 -define(MIN_INT, -9007199254740993). % -math:pow(2, 63)
@@ -105,6 +105,8 @@ emit_object(Obj, S) ->
 
 emit_map(M, S) ->
   emit_array([?MAP_AS_ARR|transit_marshaler:flatten_map(M)], S).
+emit_cmap(M, S) ->
+  emit_tagged(#tagged_value{tag=?CMap, rep=transit_marshaler:flatten_map(M)}, S).
 
 emit_array(A, S) ->
   {ArrayStart, S1} = transit_marshaler:emit_array_start(S),

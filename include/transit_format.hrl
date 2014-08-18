@@ -28,6 +28,7 @@
 -define(Link, <<"link">>).
 -define(List, <<"list">>).
 -define(Map, <<"map">>).
+-define(CMap, <<"cmap">>).
 -define(Set, <<"set">>).
 
 -define(TRANSIT_HANDLERS, transit_handlers).
