@@ -45,7 +45,12 @@
          map_nested_exemplar/1,
          map_string_keys_exemplar/1,
          map_numeric_keys_exemplar/1,
-         map_vector_keys_exemplar/1
+         map_vector_keys_exemplar/1,
+         map_unrecognized_vals_exemplar/1,
+         vector_unrecognized_vals_exemplar/1,
+         vector_1935_keywords_repeated_twice_exemplar/1,
+         vector_1936_keywords_repeated_twice_exemplar/1,
+         vector_1937_keywords_repeated_twice_exemplar/1
         ]).
 
 
@@ -139,7 +144,12 @@ groups() -> [
                map_nested_exemplar,
                map_string_keys_exemplar,
                map_numeric_keys_exemplar,
-               map_vector_keys_exemplar
+               map_vector_keys_exemplar,
+               map_unrecognized_vals_exemplar,
+               vector_unrecognized_vals_exemplar,
+               vector_1935_keywords_repeated_twice_exemplar,
+               vector_1936_keywords_repeated_twice_exemplar,
+               vector_1937_keywords_repeated_twice_exemplar
               ]} ].
 
 all() ->
@@ -236,6 +246,20 @@ map_numeric_keys_exemplar(Conf) ->
 map_vector_keys_exemplar(Conf) ->
   exemplar("map_vector_keys", #{[1,1] => <<"one">>, [2, 2] => <<"two">>}, Conf).
 
+map_unrecognized_vals_exemplar(Conf) ->
+  exemplar("map_unrecognized_vals", #{key => <<"~Unrecognized">>}, Conf).
+vector_unrecognized_vals_exemplar(Conf) ->
+  exemplar("vector_unrecognized_vals", [<<"~Unrecognized">>], Conf).
+vector_1935_keywords_repeated_twice_exemplar(Conf) ->
+  ct:pal("~p", [array_of_atoms(1934, 1934*2)]),
+  exemplar("vector_1935_keywords_repeated_twice", [array_of_atoms(1934, 1934*2)], Conf).
+vector_1936_keywords_repeated_twice_exemplar(Conf) ->
+  exemplar("vector_1936_keywords_repeated_twice", [array_of_atoms(1935, 1935*2)], Conf).
+vector_1937_keywords_repeated_twice_exemplar(Conf) ->
+  exemplar("vector_1937_keywords_repeated_twice", [array_of_atoms(1936, 1936*2)], Conf).
+
+
+
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),
   lists:map(fun(Ext) ->
@@ -249,3 +273,16 @@ exemplar(Name, Val, Config) ->
                 S = transit:write(Val, [{format,Ext}]),
                 Val = transit:read(S, [{format,Ext}])
             end, [json]).
+
+%%% generate atoms, aka keyword
+array_of_atoms(M, N) ->
+  Seeds = lists:map(fun(X) ->
+                        list_to_atom(lists:flatten(io_lib:format("key~4..0B", [X])))
+                    end, lists:seq(0,M)),
+  if N =< M ->
+       lists:sublist(Seeds, N);
+     true ->
+       lists:foldl(fun(_, Acc) ->
+                       Seeds ++ Acc
+                   end, [], lists:seq(1, N div M)) ++ lists:sublist(Seeds, N rem M)
+  end.
