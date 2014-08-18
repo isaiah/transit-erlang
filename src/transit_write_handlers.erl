@@ -1,6 +1,7 @@
 -module(transit_write_handlers).
 -behaviour(transit_write_handler).
 -export([handler/1]).
+-export([tag/1]).
 -include_lib("transit_format.hrl").
 -include_lib("transit_types.hrl").
 
@@ -178,6 +179,15 @@ handler(Data) ->
                      rep=fun(Rep) -> #tagged_value{tag=?Array, rep=Set:to_list(Rep)} end,
                      string_rep=fun(_) -> undefined end}
   end.
+
+tag(Data) ->
+  case handler(Data) of
+    undefined -> erlang:throw(unidentified_write);
+    Handler ->
+      TagHandler = Handler#write_handler.tag,
+      TagHandler(Data)
+  end.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
