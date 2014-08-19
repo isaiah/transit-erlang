@@ -14,7 +14,7 @@ write(Obj, [{format, Format}, {handler, CustomHandler}|_Config]) ->
                 msgpack ->
                   transit_msgpack_marshaler;
                 _ ->
-                  erlang:throw(unsupported_marshaler)
+                  exit(unsupported_handler)
               end,
   transit_marshaler:marshal_top(Marshaler, Obj, CustomHandler);
 write(Obj, [{format, Format}|Config]) ->

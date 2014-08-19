@@ -36,7 +36,7 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
           {DRep, C1} = decode(C, Rep, AsMapKey),
           {decode_tag(Tag, DRep), C1};
         T ->
-          erlang:throw({unknown_tag, T})
+          exit({unknown_tag, T})
       end;
     _ ->
       decode_array(Cache, Name, AsMapKey)
@@ -98,7 +98,7 @@ decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
           {[{DecodedKey, Rep}], C4}
       end;
     _ ->
-      erlang:throw(unidentified_read)
+      exit(unidentified_read)
   end;
 decode_hash(Cache, Name, _AsMapKey) ->
   lists:mapfoldl(fun({Key, Val}, C) ->
