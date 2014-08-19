@@ -252,27 +252,20 @@ map_unrecognized_vals_exemplar(Conf) ->
 vector_unrecognized_vals_exemplar(Conf) ->
   exemplar("vector_unrecognized_vals", [<<"~Unrecognized">>], Conf).
 vector_1935_keywords_repeated_twice_exemplar(Conf) ->
-  ct:pal("~p", [array_of_atoms(1934, 1934*2)]),
-  exemplar("vector_1935_keywords_repeated_twice", [array_of_atoms(1934, 1934*2)], Conf).
+  exemplar("vector_1935_keywords_repeated_twice", array_of_atoms(1934, 1934*2), Conf).
 vector_1936_keywords_repeated_twice_exemplar(Conf) ->
-  exemplar("vector_1936_keywords_repeated_twice", [array_of_atoms(1935, 1935*2)], Conf).
+  exemplar("vector_1936_keywords_repeated_twice", array_of_atoms(1935, 1935*2), Conf).
 vector_1937_keywords_repeated_twice_exemplar(Conf) ->
-  exemplar("vector_1937_keywords_repeated_twice", [array_of_atoms(1936, 1936*2)], Conf).
+  exemplar("vector_1937_keywords_repeated_twice", array_of_atoms(1936, 1936*2), Conf).
 
 
 
 compare({[],[]}) -> ok;
-compare({[H1|T1], [H2|T2]}) ->
+compare({[H1|T1]=Val, [H2|T2]}) ->
   if H1 =:= H2 ->
        compare({T1,T2});
      true ->
-       ct:pal("integer: ~p, ~p", [is_integer(H1), is_integer(H2)]),
-       ct:pal("float: ~p, ~p", [is_float(H1), is_float(H2)]),
-       ct:pal("gt: ~p", [H1 > H2]),
-       ct:pal("lt: ~p", [H1 < H2]),
-       ct:pal("eq: ~p", [H1 == H2]),
-       ct:pal("diff: h1 ~w h2 ~w", [H2, H1]),
-       ct:pal("diff: h1 ~s h2 ~s", [integer_to_list(H2), integer_to_list(H1)]),
+       ct:pal("diff: h1 ~w ~nh2 ~w~n val ~w~n", [H1, H2, Val]),
        erlang:throw(element_diff)
   end.
 exemplar(Name, Val, Config) ->
@@ -280,10 +273,8 @@ exemplar(Name, Val, Config) ->
   lists:map(fun(Ext) ->
                 File = filename:join(Dir, Name ++ "." ++ atom_to_list(Ext)),
                 {ok, Data} = file:read_file(File),
-                L = bit_size(Data) - 8,
-                <<D:L/binary-unit:1, _/binary>> = Data,
                 % Test read
-                Val1 = transit:read(D, [{format, Ext}]),
+                Val1 = transit:read(Data, [{format, Ext}]),
                 if Val1 =/= Val ->
                      compare({Val, Val1});
                    true ->
@@ -294,6 +285,8 @@ exemplar(Name, Val, Config) ->
             end, [json]).
 
 %%% generate atoms, aka keyword
+-spec array_of_atoms(M,N) ->
+  L when M::integer(), N::integer(), L::list().
 array_of_atoms(M, N) ->
   Seeds = lists:map(fun(X) ->
                         list_to_atom(lists:flatten(io_lib:format("key~4..0B", [X])))
