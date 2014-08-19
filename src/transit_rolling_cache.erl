@@ -3,6 +3,7 @@
 -include_lib("transit_format.hrl").
 
 -define(CACHE_CODE_DIGITS, 44).
+-define(CACHE_SIZE, ?CACHE_CODE_DIGITS * ?CACHE_CODE_DIGITS).
 -define(FIRST_ORD, 48).
 -define(MIN_SIZE_CACHEABLE, 4 * 8).
 
@@ -92,7 +93,14 @@ is_cacheable(Str, false) ->
 %  [Int] = io_lib_format:fwrite("~w", Char),
 %  Int.
 
-encache(Name, C={Kv,Vk}) ->
+encache(Name, Cache={Kv,_Vk}) ->
+  C = case dict:size(Kv) > ?CACHE_SIZE of
+        true ->
+          {Kv, dict:new()};
+        false ->
+          Cache
+      end,
+  {Kv, Vk} = C,
   case dict:find(Name, Vk) of
     {ok, Val} ->
       {Val, C};
@@ -138,7 +146,7 @@ encache_test() ->
 decode_test() ->
   Val = <<"~#list">>,
   Cache = {dict:new(), dict:new()},
-  {_, C={Kv,_}} = decode(Cache, Val, false),
+  {_, C} = decode(Cache, Val, false),
   Key = <<"^0">>,
   {Val, _} = decode(C, Key, false).
 -endif.

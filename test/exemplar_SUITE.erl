@@ -259,13 +259,12 @@ vector_1937_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1937_keywords_repeated_twice", array_of_atoms(1936, 1936*2), Conf).
 
 
-
 compare({[],[]}) -> ok;
-compare({[H1|T1]=Val, [H2|T2]}) ->
+compare({[H1|T1]=_Val, [H2|T2]=_Val1}) ->
   if H1 =:= H2 ->
        compare({T1,T2});
      true ->
-       ct:pal("diff: h1 ~w ~nh2 ~w~n val ~w~n", [H1, H2, Val]),
+       %ct:pal("diff: h1 ~w ~nh2 ~w~n val ~w~n", [H1, H2, Val1]),
        erlang:throw(element_diff)
   end.
 exemplar(Name, Val, Config) ->
