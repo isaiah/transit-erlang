@@ -57,7 +57,8 @@
          maps_four_char_sym_keys_exemplar/1,
          maps_two_char_string_keys_exemplar/1,
          maps_three_char_string_keys_exemplar/1,
-         maps_four_char_string_keys_exemplar/1
+         maps_four_char_string_keys_exemplar/1,
+         maps_unrecognized_keys_exemplar/1
         ]).
 
 
@@ -163,7 +164,8 @@ groups() -> [
                maps_four_char_sym_keys_exemplar,
                maps_two_char_string_keys_exemplar,
                maps_three_char_string_keys_exemplar,
-               maps_four_char_string_keys_exemplar
+               maps_four_char_string_keys_exemplar,
+               maps_unrecognized_keys_exemplar
               ]} ].
 
 all() ->
@@ -300,15 +302,14 @@ maps_three_char_string_keys_exemplar(Conf) ->
                                            #{<<"aaa">> => 5, <<"bbb">> => 6}],
            Conf).
 maps_four_char_string_keys_exemplar(Conf) ->
-  S = [#{<<"aaaa">> => 1, <<"bbbb">> => 2},
+  exemplar("maps_four_char_string_keys", [#{<<"aaaa">> => 1, <<"bbbb">> => 2},
                                           #{<<"aaaa">> => 3, <<"bbbb">> => 4},
                                           #{<<"aaaa">> => 5, <<"bbbb">> => 6}],
-  ct:pal("~p", [S]),
-  exemplar("maps_four_char_string_keys", S, Conf).
-
-
-
-
+           Conf).
+maps_unrecognized_keys_exemplar(Conf) ->
+  exemplar("maps_unrecognized_keys", [transit_types:tv(<<"abcde">>, anything),
+                                      transit_types:tv(<<"fghij">>, 'anything-else')],
+          Conf).
 
 compare([],[]) -> ok;
 compare([H|T1], [H|T2]) -> compare(T1, T2);

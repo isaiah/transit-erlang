@@ -27,14 +27,6 @@ integer_rep(I) ->
 integer_string_rep(I) ->
   list_to_binary(integer_to_list(I)).
 
-%%% BigInt handler
-bigint_tag(_) ->
-  ?BigInt.
-bigint_rep(N) ->
-  N.
-bigint_string_rep(N) ->
-  list_to_binary(integer_to_list(N)).
-
 %%% Float handler
 float_tag(_) ->
   ?Float.
@@ -93,7 +85,7 @@ map_string_rep(_M) ->
 keyword_tag(_K) ->
   ?Keyword.
 keyword_rep(K) ->
-  atom_to_list(K).
+  K.
 keyword_string_rep(K) ->
   list_to_binary(atom_to_list(K)).
 
@@ -104,30 +96,6 @@ datetime_rep(_T=#transit_datetime{timestamp={Mega, Sec, Micro}}) ->
   (Mega*100000+Sec)*10000 + Micro div 100000.
 datetime_string_rep(D=#transit_datetime{}) ->
   integer_to_binary(datetime_rep(D)).
-
-%%% UUID handler
-uuid_tag(_U) ->
-  ?UUID.
-uuid_rep(U) ->
-  [U bsr 64, U band ?UUID_MASK].
-uuid_string_rep(U) ->
-  U. % TODO
-
-%%% URI handler
-uri_tag(_U) ->
-  ?URI.
-uri_rep(U) ->
-  U.
-uri_string_rep(U) ->
-  U.
-
-%%% Set handler
-set_tag(_Set) ->
-  ?Set.
-set_rep(U) ->
-  #tagged_value{tag=?Array, rep=sets:to_list(U)}.
-set_string_rep(_) ->
-  undefined.
 
 handler([]) ->
   #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1};
@@ -159,16 +127,12 @@ handler(Data) when is_atom(Data) ->
   end;
 handler(Data) when is_record(Data, transit_datetime) ->
   #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
-handler(_TaggedVal=#tagged_value{tag=Tag, rep=Rep}) ->
-  #write_handler{tag=fun(_) -> Tag end,
-                 rep=fun(_) -> Rep end,
-                 string_rep = fun(_) ->
-                                  if is_list(Rep) ->
-                                       list_to_binary(Rep);
-                                     true ->
-                                       Rep
-                                  end
-                                  end
+handler(_TaggedVal=#tagged_value{}) ->
+  #write_handler{tag=fun(_T=#tagged_value{tag=Tag}) -> Tag end,
+                        %(Tag) -> Tag end,
+                 rep=fun(_T=#tagged_value{rep=Rep}) -> Rep end,
+                        %(Rep) -> Rep end,
+                 string_rep = fun(_T=#tagged_value{rep=Rep}) -> Rep end
                 };
 handler(Data) ->
   case transit_utils:is_set(Data) of

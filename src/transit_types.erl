@@ -3,7 +3,7 @@
 -include_lib("transit_format.hrl").
 
 -export([datetime/1, uri/1, uuid/1, link/1, binary/1, symbol/1, bigint/1]).
--export([list/1]).
+-export([list/1, tv/2]).
 
 -type datetime() :: #transit_datetime{}.
 -export_type([datetime/0]).

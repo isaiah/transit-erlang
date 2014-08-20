@@ -83,8 +83,12 @@ decode_array(Cache, Name, AsMapKey) ->
                  end, Cache, Name).
 
 decode_tag(Tag, Rep) ->
-  F = transit_read_handlers:handler(Tag),
-  F(Rep).
+  case transit_read_handlers:handler(Tag) of
+    F when is_function(F) ->
+      F(Rep);
+    _ ->
+      transit_types:tv(Tag, Rep)
+  end.
 
 decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
   case Name of

@@ -73,8 +73,7 @@ emit_string(Tag, String, Env) ->
   Escaped = transit_marshaler:escape(String),
   Cache = transit_marshaler:cache(Env),
   {Encoded, Cache1} = transit_rolling_cache:encode(Cache, <<Tag/bitstring, Escaped/bitstring>>, transit_marshaler:as_map_key(Env)),
-  Env1 = Env#env{cache=Cache1},
-  emit_object(Encoded, Env1).
+  emit_object(Encoded, Env#env{cache=Cache1}).
 
 -spec emit_object(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
