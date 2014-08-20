@@ -48,7 +48,9 @@ handler(?Symbol) ->
       transit_types:symbol(Rep)
   end;
 handler(?Date) ->
-  fun(Rep) ->
+  fun(Rep) when is_integer(Rep) ->
+      transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
+     (Rep) ->
       transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)))
   end;
 

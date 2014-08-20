@@ -13,7 +13,14 @@
 
 read(Name, [{format, Format}|_Config]) ->
   Cache = transit_rolling_cache:empty(Format),
-  {Val, _Cache} = decode(Cache, jsx:decode(Name), false),
+  Rep = case Format of
+          msgpack ->
+            {ok, R} = msgpack:unpack(Name, [{format, jsx}]),
+            R;
+          _ ->
+            jsx:decode(Name)
+        end,
+  {Val, _Cache} = decode(Cache, Rep, false),
   Val.
 
 %% ------------------------------------------------------------------
