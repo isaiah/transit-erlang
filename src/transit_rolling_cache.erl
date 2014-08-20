@@ -118,10 +118,11 @@ encache_test() ->
   {_, C} = encache(empty(), <<"foobar">>),
   {<<"^0">>, _} = encode_with_cache(C, <<"foobar">>, true).
 
-decode_test() ->
-  Val = <<"~#list">>,
-  Cache = empty(),
-  {_, #cache{} = Cache1} = decode(Cache, Val, false),
-  {Val, _} = decode(Cache1, <<"^0">>, false).
-
+decode_test_() ->
+  Tests = [{<<"~#list">>, false}, {<<"aaaa">>, true}],
+  [fun() ->
+       Cache = empty(),
+       {_, #cache{} = Cache1} = decode(Cache, Val, AsMapKey),
+       {Val, _} = decode(Cache1, <<"^0">>, AsMapKey)
+   end || {Val, AsMapKey} <- Tests].
 -endif.

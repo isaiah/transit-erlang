@@ -104,7 +104,17 @@ emit_object(Obj, S) ->
   {<<Sep/bitstring, Body/bitstring>>, S1}.
 
 emit_map(M, S) ->
-  emit_array([?MAP_AS_ARR|transit_marshaler:flatten_map(M)], S).
+  A = [?MAP_AS_ARR|transit_marshaler:flatten_map(M)],
+  {ArrayStart, S1} = transit_marshaler:emit_array_start(S),
+  {Body, S2, _} = lists:foldl(fun (E, {In, NS, AsMapKey}) ->
+                               NS1 = transit_marshaler:force_as_map_key(AsMapKey, NS),
+                               {NE, NS2} = transit_marshaler:marshal(?MODULE, E, NS1),
+                               {<<In/bitstring, NE/bitstring>>, NS2, not AsMapKey}
+                           end,
+                           {<<>>, S1, false}, A),
+  {ArrayEnd, S3} = transit_marshaler:emit_array_end(S2),
+  {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
+
 emit_cmap(M, S) ->
   emit_tagged(#tagged_value{tag=?CMap, rep=transit_marshaler:flatten_map(M)}, S).
 
@@ -160,13 +170,12 @@ marshals_extend(_Env) ->
            %{<<"[\"\"]">>, [""]},
            {<<"[\"\"]">>, [<<"">>]},
            {<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
-           {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, #{a => b, 3 => 4}},
-           {<<"[\"^ \",\"a\",\"b\",3,4]">>, #{"a" => "b", 3 => 4}},
-           {<<"[\"^ \",\"~:a\",\"~:b\",3,4]">>, [{a, b}, {3, 4}]},
-           {<<"[\"^ \",\"a\",\"b\",3,4]">>, [{"a", "b"}, {3, 4}]},
-           %XXX Failing, because the way emit_map is implemented by flatten_map
-           %{<<"[[\"^ \",\"foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
-           %  [#{"foobar" =>"foobar"},#{"foobar" =>"foobar"}]},
+           {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, #{a => b, 3 => 4}},
+           {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, #{"a" => "b", 3 => 4}},
+           {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, [{a, b}, {3, 4}]},
+           {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, [{"a", "b"}, {3, 4}]},
+           {<<"[[\"^ \",\"foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
+             [#{"foobar" =>"foobar"},#{"foobar" =>"foobar"}]},
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
              [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},

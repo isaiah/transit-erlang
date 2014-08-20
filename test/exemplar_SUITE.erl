@@ -50,7 +50,14 @@
          vector_unrecognized_vals_exemplar/1,
          vector_1935_keywords_repeated_twice_exemplar/1,
          vector_1936_keywords_repeated_twice_exemplar/1,
-         vector_1937_keywords_repeated_twice_exemplar/1
+         vector_1937_keywords_repeated_twice_exemplar/1,
+         map_10_items_exemplar/1,
+         maps_two_char_sym_keys_exemplar/1,
+         maps_three_char_sym_keys_exemplar/1,
+         maps_four_char_sym_keys_exemplar/1,
+         maps_two_char_string_keys_exemplar/1,
+         maps_three_char_string_keys_exemplar/1,
+         maps_four_char_string_keys_exemplar/1
         ]).
 
 
@@ -149,7 +156,14 @@ groups() -> [
                vector_unrecognized_vals_exemplar,
                vector_1935_keywords_repeated_twice_exemplar,
                vector_1936_keywords_repeated_twice_exemplar,
-               vector_1937_keywords_repeated_twice_exemplar
+               vector_1937_keywords_repeated_twice_exemplar,
+               map_10_items_exemplar,
+               maps_two_char_sym_keys_exemplar,
+               maps_three_char_sym_keys_exemplar,
+               maps_four_char_sym_keys_exemplar,
+               maps_two_char_string_keys_exemplar,
+               maps_three_char_string_keys_exemplar,
+               maps_four_char_string_keys_exemplar
               ]} ].
 
 all() ->
@@ -258,6 +272,43 @@ vector_1936_keywords_repeated_twice_exemplar(Conf) ->
 vector_1937_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1937_keywords_repeated_twice", array_of_atoms(1936, 1936*2), Conf).
 
+map_10_items_exemplar(Conf) ->
+  exemplar("map_10_items", hash_of_size(10), Conf).
+maps_two_char_sym_keys_exemplar(Conf) ->
+  exemplar("maps_two_char_sym_keys", [#{aa => 1, bb => 2},
+                                     #{aa => 3, bb => 4},
+                                     #{aa => 5, bb => 6}],
+           Conf).
+maps_three_char_sym_keys_exemplar(Conf) ->
+  exemplar("maps_three_char_sym_keys", [#{aaa => 1, bbb => 2},
+                                        #{aaa => 3, bbb => 4},
+                                        #{aaa => 5, bbb => 6}],
+           Conf).
+maps_four_char_sym_keys_exemplar(Conf) ->
+  exemplar("maps_four_char_sym_keys", [#{aaaa => 1, bbbb => 2},
+                                       #{aaaa => 3, bbbb => 4},
+                                       #{aaaa => 5, bbbb => 6}],
+           Conf).
+maps_two_char_string_keys_exemplar(Conf) ->
+  exemplar("maps_two_char_string_keys", [#{<<"aa">> => 1, <<"bb">> => 2},
+                                         #{<<"aa">> => 3, <<"bb">> => 4},
+                                         #{<<"aa">> => 5, <<"bb">> => 6}],
+           Conf).
+maps_three_char_string_keys_exemplar(Conf) ->
+  exemplar("maps_three_char_string_keys", [#{<<"aaa">> => 1, <<"bbb">> => 2},
+                                           #{<<"aaa">> => 3, <<"bbb">> => 4},
+                                           #{<<"aaa">> => 5, <<"bbb">> => 6}],
+           Conf).
+maps_four_char_string_keys_exemplar(Conf) ->
+  S = [#{<<"aaaa">> => 1, <<"bbbb">> => 2},
+                                          #{<<"aaaa">> => 3, <<"bbbb">> => 4},
+                                          #{<<"aaaa">> => 5, <<"bbbb">> => 6}],
+  ct:pal("~p", [S]),
+  exemplar("maps_four_char_string_keys", S, Conf).
+
+
+
+
 
 compare([],[]) -> ok;
 compare([H|T1], [H|T2]) -> compare(T1, T2);
@@ -292,5 +343,8 @@ array_of_atoms(M, N) ->
      true ->
        lists:foldl(fun(_, Acc) ->
                        Seeds ++ Acc
-                   end, [], lists:seq(1, N div M)) ++ lists:sublist(Seeds, N rem M)
+                   end, lists:sublist(Seeds, N rem M), lists:seq(1, N div M))
   end.
+
+hash_of_size(N) ->
+  maps:from_list(lists:zip(array_of_atoms(N, N), lists:seq(0, N-1))).
