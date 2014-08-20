@@ -259,14 +259,11 @@ vector_1937_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1937_keywords_repeated_twice", array_of_atoms(1936, 1936*2), Conf).
 
 
-compare({[],[]}) -> ok;
-compare({[H1|T1]=_Val, [H2|T2]=_Val1}) ->
-  if H1 =:= H2 ->
-       compare({T1,T2});
-     true ->
-       %ct:pal("diff: h1 ~w ~nh2 ~w~n val ~w~n", [H1, H2, Val1]),
-       erlang:throw(element_diff)
-  end.
+compare([],[]) -> ok;
+compare([H|T1], [H|T2]) -> compare(T1, T2);
+compare([X|_], [Y|_]) ->
+  ct:fail({element_diff, X, Y}).
+
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),
   lists:map(fun(Ext) ->
@@ -275,7 +272,7 @@ exemplar(Name, Val, Config) ->
                 % Test read
                 Val1 = transit:read(Data, [{format, Ext}]),
                 if Val1 =/= Val ->
-                     compare({Val, Val1});
+                     compare(Val, Val1);
                    true ->
                      %% Test reencode
                      S = transit:write(Val, [{format,Ext}]),

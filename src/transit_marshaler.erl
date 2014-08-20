@@ -232,7 +232,7 @@ marshal(Name, Obj, S) ->
   end.
 
 new_env() ->
-  Cache = {dict:new(), dict:new()},
+  Cache = transit_rolling_cache:empty(),
   S = queue:from_list([true]),
   #env{started=S, cache=Cache}.
 

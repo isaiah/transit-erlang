@@ -182,7 +182,7 @@ handler(Data) ->
 
 tag(Data) ->
   case handler(Data) of
-    undefined -> erlang:throw(unidentified_write);
+    undefined -> exit(unidentified_write);
     Handler ->
       TagHandler = Handler#write_handler.tag,
       TagHandler(Data)

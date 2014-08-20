@@ -12,7 +12,7 @@
 %% ------------------------------------------------------------------
 
 read(Name, _Opts) ->
-  Cache = {dict:new(), dict:new()},
+  Cache = transit_rolling_cache:empty(),
   {Val, _Cache} = decode(Cache, jsx:decode(Name), false),
   Val.
 
@@ -35,8 +35,8 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
         <<"~", "#", Tag/binary>> ->
           {DRep, C1} = decode(C, Rep, AsMapKey),
           {decode_tag(Tag, DRep), C1};
-        _ ->
-          erlang:throw(unknown_tag)
+        T ->
+          exit({unknown_tag, T})
       end;
     _ ->
       decode_array(Cache, Name, AsMapKey)
@@ -98,7 +98,7 @@ decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
           {[{DecodedKey, Rep}], C4}
       end;
     _ ->
-      erlang:throw(unidentified_read)
+      exit(unidentified_read)
   end;
 decode_hash(Cache, Name, _AsMapKey) ->
   lists:mapfoldl(fun({Key, Val}, C) ->
@@ -110,7 +110,7 @@ decode_hash(Cache, Name, _AsMapKey) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  {dict:new(), dict:new()}.
+  transit_rolling_cache:empty().
 
 stop_server(_C) ->
   ok.
