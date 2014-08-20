@@ -92,8 +92,8 @@ keyword_string_rep(K) ->
 %%% date handler
 datetime_tag(_D) ->
   ?Date.
-datetime_rep(_T=#transit_datetime{timestamp={Mega, Sec, Micro}}) ->
-  (Mega*100000+Sec)*10000 + Micro div 100000.
+datetime_rep(_T=#transit_datetime{timestamp=Timestamp}) ->
+  transit_utils:timestamp_to_ms(Timestamp).
 datetime_string_rep(D=#transit_datetime{}) ->
   integer_to_binary(datetime_rep(D)).
 
