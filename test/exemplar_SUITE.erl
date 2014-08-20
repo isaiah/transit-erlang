@@ -58,7 +58,8 @@
          maps_two_char_string_keys_exemplar/1,
          maps_three_char_string_keys_exemplar/1,
          maps_four_char_string_keys_exemplar/1,
-         maps_unrecognized_keys_exemplar/1
+         maps_unrecognized_keys_exemplar/1,
+         map_nested_exemplars/1
         ]).
 
 
@@ -165,7 +166,8 @@ groups() -> [
                maps_two_char_string_keys_exemplar,
                maps_three_char_string_keys_exemplar,
                maps_four_char_string_keys_exemplar,
-               maps_unrecognized_keys_exemplar
+               maps_unrecognized_keys_exemplar,
+               map_nested_exemplars
               ]} ].
 
 all() ->
@@ -310,6 +312,14 @@ maps_unrecognized_keys_exemplar(Conf) ->
   exemplar("maps_unrecognized_keys", [transit_types:tv(<<"abcde">>, anything),
                                       transit_types:tv(<<"fghij">>, 'anything-else')],
           Conf).
+
+map_nested_exemplars(Conf) ->
+  lists:foreach(fun(N) ->
+                    exemplar(lists:flatten(io_lib:format("map_~p_nested", [N])),
+                             #{f => hash_of_size(N),
+                               s => hash_of_size(N)},
+                             Conf)
+                end, [10, 1935, 1936, 1937]).
 
 compare([],[]) -> ok;
 compare([H|T1], [H|T2]) -> compare(T1, T2);
