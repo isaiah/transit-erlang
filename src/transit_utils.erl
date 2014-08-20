@@ -1,7 +1,7 @@
 -module(transit_utils).
 -export([is_set/1]).
 -export([iso_8601_fmt/1]).
--export([ms_to_date/1]).
+-export([iso_8601_to_timestamp/1]).
 -export([ms_to_timestamp/1]).
 -export([double_to_binary/1]).
 -export([map_rep/1]).
@@ -27,20 +27,23 @@ is_set(Data) ->
 iso_8601_fmt(Timestamp) ->
   {_, _, Low} = Timestamp,
   Millis = Low rem 1000,
-  DateTime = calendar:now_to_datetime(Timestamp),
+  DateTime = calendar:now_to_universal_time(Timestamp),
   {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
   io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
-      [Year, Month, Day, Hour, Min, Sec, Millis]).
+                [Year, Month, Day, Hour, Min, Sec, Millis]).
 
-ms_to_date(Milliseconds) ->
-   BaseDate      = calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}),
-   Seconds       = BaseDate + (Milliseconds div 1000),
-   calendar:gregorian_seconds_to_datetime(Seconds).
+iso_8601_to_timestamp(Rep) ->
+  BaseDate = calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}),
+  <<Y:8/binary-unit:4,"-",MM:8/binary-unit:2,"-",D:8/binary-unit:2,"T",H:8/binary-unit:2,":",M:8/binary-unit:2,":",S:8/binary-unit:2,".",MS:8/binary-unit:3,"Z">> = Rep,
+  DateTime = lists:map(fun erlang:binary_to_integer/1, [Y,MM,D,H,M,S,MS]),
+  UTC = {list_to_tuple(lists:sublist(DateTime, 3)), list_to_tuple(lists:sublist(DateTime, 4, 3))},
+  Secs = calendar:datetime_to_gregorian_seconds(UTC) - BaseDate,
+  ms_to_timestamp(Secs * 1000 + lists:last(DateTime)).
 
 ms_to_timestamp(Milliseconds) ->
   {Milliseconds div 1000000000,
-   Milliseconds div 10000 rem 100000,
-   Milliseconds rem 10000}.
+   Milliseconds div 1000 rem 1000000,
+   Milliseconds rem 1000}.
 
 double_to_binary(Double) ->
   [Rep] = io_lib:format("~w", [Double]),
@@ -53,4 +56,12 @@ map_rep(PropList) ->
 -else.
 map_rep(Ret) ->
   Ret.
+-endif.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+date_formatting_test() ->
+  A = {946, 728000, 0},
+  B = list_to_binary(lists:flatten(iso_8601_fmt(A))),
+  ?assertEqual(A, iso_8601_to_timestamp(B)).
 -endif.

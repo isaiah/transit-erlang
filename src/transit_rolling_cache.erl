@@ -1,5 +1,6 @@
 -module(transit_rolling_cache).
--export([empty/0]).
+-export([empty/1]).
+-export([nocache/0]).
 
 -export([encode/3, decode/3]).
 -include_lib("transit_format.hrl").
@@ -11,7 +12,7 @@
 
 -record(cache, { kv :: dict:dict(), vk :: dict:dict() }).
 
--opaque cache() :: #cache{}.
+-opaque cache() :: #cache{} | nocache.
 
 -export_type([cache/0]).
 
@@ -19,11 +20,20 @@
 %% ---------------------------------------
 
 %% empty/0 returns the new empty cache
--spec empty() -> cache().
-empty() -> #cache { kv = dict:new(), vk = dict:new() }.
+-spec empty(Format) -> cache() when Format::atom().
+empty(json_verbose) -> nocache;
+empty(_Format) -> #cache { kv = dict:new(), vk = dict:new() }.
+
+%% when decoding json verbose, cache is disabled.
+nocache() ->
+  nocache.
 
 -spec encode(Cache, Name, boolean()) -> Name
   when Cache::cache(), Name::bitstring().
+% XXX(isaiah) A very interesting bug of the compiler, this is emitted
+% and encode_with_cache doesn't know how to handle "nocache".
+%encode(nocache, Name, _AsMapKey) ->
+%  {Name, nocahe};
 encode(Cache, Name, AsMapKey) ->
   encode_with_cache(Cache, Name, AsMapKey).
 
@@ -36,7 +46,9 @@ decode(#cache { kv = KV } = C, Name, AsMapKey) ->
           add_cacheable(C, Name, AsMapKey)
       end;
     false -> add_cacheable(C, Name, AsMapKey)
-  end.
+  end;
+%%% no cache
+decode(nocache, Name, _AsMapKey) -> {Name, nocache}.
 
 %% INTERNALS
 %% ---------------------------------------
@@ -85,6 +97,8 @@ encache_(#cache { kv=KV, vk=VK } = C, N) ->
                     vk = dict:store(N, Key, VK) }}
   end.
 
+encode_with_cache(nocache, Name, _AsMapKey) ->
+  {Name, nocache};
 encode_with_cache(#cache { kv=KV } = C, Name, AsMapKey) ->
   case dict:find(Name, KV) of
     {ok, Val} -> {Val, C};
@@ -115,14 +129,16 @@ is_cacheable_test_() ->
   ?_assertNot(is_cacheable(<<"foobar">>, false)).
 
 encache_test() ->
-  {_, C} = encache(empty(), <<"foobar">>),
+  {_, C} = encache(empty(json), <<"foobar">>),
   {<<"^0">>, _} = encode_with_cache(C, <<"foobar">>, true).
 
 decode_test_() ->
   Tests = [{<<"~#list">>, false}, {<<"aaaa">>, true}],
   [fun() ->
-       Cache = empty(),
+       Cache = empty(json),
        {_, #cache{} = Cache1} = decode(Cache, Val, AsMapKey),
        {Val, _} = decode(Cache1, <<"^0">>, AsMapKey)
    end || {Val, AsMapKey} <- Tests].
+empty_cache_test() ->
+  ?_assertEqual(nocache, empty(json_verbose)).
 -endif.

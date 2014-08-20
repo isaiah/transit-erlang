@@ -171,8 +171,8 @@ find_handler(Obj, M, Env) ->
       Handler
   end.
 
-marshal_top(M, Object, CustomHandler) ->
-  Env = new_env(CustomHandler),
+marshal_top(M, Object, Conf) ->
+  Env = new_env(Conf),
   Handler = find_handler(Object, M, Env),
   TagFun = Handler#write_handler.tag,
   Tag = TagFun(Object),
@@ -232,14 +232,15 @@ marshal(Name, Obj, S) ->
   end.
 
 new_env() ->
-  Cache = transit_rolling_cache:empty(),
+  Cache = transit_rolling_cache:empty(json),
   S = queue:from_list([true]),
   #env{started=S, cache=Cache}.
 
--spec new_env(module()) -> env().
-new_env(CustomHandler) ->
+-spec new_env({atom(), module()}) -> env().
+new_env({Format, CustomHandler}) ->
   Env = new_env(),
-  Env#env{custom_handler=CustomHandler}.
+  Cache = transit_rolling_cache:empty(Format),
+  Env#env{custom_handler=CustomHandler, cache=Cache}.
 
 stringable_keys(Rep) when is_map(Rep) ->
   lists:all(fun(X) ->

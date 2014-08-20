@@ -16,6 +16,6 @@ write(Obj, [{format, Format}, {handler, CustomHandler}|_Config]) ->
                 _ ->
                   exit(unsupported_handler)
               end,
-  transit_marshaler:marshal_top(Marshaler, Obj, CustomHandler);
+  transit_marshaler:marshal_top(Marshaler, Obj, {Format, CustomHandler});
 write(Obj, [{format, Format}|Config]) ->
   write(Obj, [{format, Format}, {handler, ?MODULE}|Config]).

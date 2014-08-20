@@ -98,7 +98,7 @@
                transit_types:uri(<<"http://www.詹姆斯.com/"/utf8>>)]).
 
 -define(DATES, lists:map(fun(X) -> transit_types:datetime(X) end,
-                         [{-6106,01760,0}, {0,0,0}, {946,72800,0}, {1396,90903,7}])).
+                         [{-6106,017600,0}, {0,0,0}, {946,728000,0}, {1396,909037,0}])).
 
 %-define(SYM_STRS, [<<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"a1">>, <<"b2">>, <<"c3">>, <<"a_b">>]).
 -define(KEYWORDS, [a, ab, abc, abcd, abcde, a1, b2, c3, 'a_b']).
@@ -191,7 +191,7 @@ one_keyword_exemplar(Conf) ->
 one_symbol_exemplar(Conf) ->
   exemplar("one_symbol", transit_types:symbol("hello"), Conf).
 one_date_exemplar(Conf) ->
-  exemplar("one_date", transit_types:datetime({946,72800,0}), Conf).
+  exemplar("one_date", transit_types:datetime({946,728000,0}), Conf).
 vector_simple_exemplar(Conf) ->
   exemplar("vector_simple", ?ArraySimple, Conf).
 vector_empty_exemplar(Conf) ->
@@ -328,19 +328,19 @@ compare([X|_], [Y|_]) ->
 
 exemplar(Name, Val, Config) ->
   Dir = ?config(data_dir, Config),
-  lists:map(fun(Ext) ->
-                File = filename:join(Dir, Name ++ "." ++ atom_to_list(Ext)),
+  lists:map(fun({Format, Ext}) ->
+                File = filename:join(Dir, Name ++ Ext),
                 {ok, Data} = file:read_file(File),
                 % Test read
-                Val1 = transit:read(Data, [{format, Ext}]),
+                Val1 = transit:read(Data, [{format, Format}]),
                 if Val1 =/= Val ->
                      compare(Val, Val1);
                    true ->
                      %% Test reencode
-                     S = transit:write(Val, [{format,Ext}]),
-                     Val = transit:read(S, [{format,Ext}])
+                     S = transit:write(Val, [{format,Format}]),
+                     Val = transit:read(S, [{format,Format}])
                 end
-            end, [json]).
+            end, [{json, ".json"}, {json_verbose, ".verbose.json"}]).
 
 %%% generate atoms, aka keyword
 -spec array_of_atoms(M,N) ->

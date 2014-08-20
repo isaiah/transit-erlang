@@ -11,8 +11,8 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-read(Name, _Opts) ->
-  Cache = transit_rolling_cache:empty(),
+read(Name, [{format, Format}|_Config]) ->
+  Cache = transit_rolling_cache:empty(Format),
   {Val, _Cache} = decode(Cache, jsx:decode(Name), false),
   Val.
 
@@ -26,6 +26,16 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
     [?MAP_AS_ARR|Tail] ->
       {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
       {transit_utils:map_rep(L), C};
+    %%% If the output is from a verbose write, it will be encoded as a hash
+    [{Key,Val}] ->
+      case decode(Cache, Key, true) of
+        {{tag, Tag}, C1} ->
+          {DVal, C2} = decode(C1, Val, AsMapKey),
+          {decode_tag(Tag, DVal), C2};
+        {DKey, C1} ->
+          {DVal, C2} = decode(C1, Val, false),
+          {transit_utils:map_rep([{DKey, DVal}]), C2}
+      end;
     [{_, _}|_] ->
       {L, C} = decode_hash(Cache, Name, AsMapKey),
       {transit_utils:map_rep(L), C};
@@ -36,6 +46,10 @@ decode(Cache, Name, AsMapKey) when is_list(Name) ->
           {DRep, C1} = decode(C, Rep, AsMapKey),
           {decode_tag(Tag, DRep), C1};
         T ->
+          ct:pal("~p", [Cache]),
+          ct:pal("~p", [EscapedTag]),
+          ct:pal("~p", [T]),
+          ct:pal("~p", [Name]),
           exit({unknown_tag, T})
       end;
     _ ->
@@ -59,8 +73,8 @@ parse_string(String) ->
         _ ->
           if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
                <<Tag/binary,Rep/binary>>;
-             Tag =:= "#" ->
-               Rep;
+             Tag =:= <<"#">> ->
+               {tag, Rep};
              true ->
                #tagged_value{tag=Tag, rep=Rep}
           end
@@ -114,7 +128,7 @@ decode_hash(Cache, Name, _AsMapKey) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 start_server() ->
-  transit_rolling_cache:empty().
+  transit_rolling_cache:empty(json).
 
 stop_server(_C) ->
   ok.
@@ -146,5 +160,6 @@ unmarshal_quoted(C) ->
 
 parse_string_test_() ->
   ?_assertEqual(foo, parse_string(<<"~:foo">>)),
-  ?_assertEqual(<<"~foo">>, parse_string(<<"~~foo">>)).
+  ?_assertEqual(<<"~foo">>, parse_string(<<"~~foo">>)),
+  ?_assertEqual({tag, <<"'">>}, parse_string(<<"~#'">>)).
 -endif.
