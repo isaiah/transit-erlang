@@ -340,7 +340,7 @@ exemplar(Name, Val, Config) ->
                      S = transit:write(Val, [{format,Format}]),
                      Val = transit:read(S, [{format,Format}])
                 end
-            end, [{json, ".json"}, {json_verbose, ".verbose.json"}]).
+            end, [{json, ".json"}, {json_verbose, ".verbose.json"}, {msgpack, ".mp"}]).
 
 %%% generate atoms, aka keyword
 -spec array_of_atoms(M,N) ->

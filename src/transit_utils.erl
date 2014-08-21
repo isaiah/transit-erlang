@@ -6,6 +6,7 @@
 -export([timestamp_to_ms/1]).
 -export([double_to_binary/1]).
 -export([map_rep/1]).
+-export([uuid_to_string/1]).
 
 is_set(Data) ->
   case ordsets:is_set(Data) of
@@ -56,6 +57,12 @@ double_to_binary(Double) ->
   list_to_binary(Rep).
   %float_to_binary(F, [{decimals, 4},compact]).
 
+uuid_to_string([HI, LO]) ->
+  <<U0:32, U1:16, U2:16, U3:16, U4:48>> = <<HI:64,LO:64>>,
+  lists:flatten(io_lib:format(
+                  "~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
+                  [U0, U1, U2, U3, U4])).
+
 -ifdef(maps_support).
 map_rep(PropList) ->
   maps:from_list(PropList).
@@ -77,4 +84,7 @@ timestamp_ms_conversion_test_() ->
   ?_assertEqual(A,ms_to_timestamp(B)),
   ?_assertEqual(B,timestamp_to_ms(A)).
 
+uuid_test() ->
+  U = "5a2cbea3-e8c6-428b-b525-21239370dd55",
+  ?assertEqual(U, uuid_to_string([6497777973583037067,-5393868542025081515])).
 -endif.

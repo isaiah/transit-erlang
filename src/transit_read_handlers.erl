@@ -58,6 +58,12 @@ handler(?VerboseDate) ->
   fun(Rep) ->
       transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep))
   end;
+handler(?UUID) ->
+  fun(U=[_, _]) ->
+      transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
+     (U) ->
+      transit_types:uuid(U)
+  end;
 handler(_) ->
   undefined.
 

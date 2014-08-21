@@ -124,7 +124,7 @@ marshal_top(M, Object, Conf) ->
                    true ->
                      marshal(M, Object, Env)
                 end,
-  jsx:encode(Ret).
+  Ret.
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, Obj, S) ->

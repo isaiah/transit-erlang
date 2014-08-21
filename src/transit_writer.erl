@@ -9,13 +9,15 @@ write(Obj, [{format, Format}, {handler, CustomHandler}|_Config]) ->
   Marshaler = case Format of
                 json_verbose ->
                   transit_json_verbose_marshaler;
-                json ->
-                  transit_json_marshaler;
-                msgpack ->
-                  transit_msgpack_marshaler;
                 _ ->
-                  exit(unsupported_handler)
+                  transit_json_marshaler
               end,
-  transit_marshaler:marshal_top(Marshaler, Obj, {Format, CustomHandler});
+  Rep = transit_marshaler:marshal_top(Marshaler, Obj, {Format, CustomHandler}),
+  case Format of
+    msgpack ->
+      msgpack:pack(Rep, [{format, jsx}]);
+    _ ->
+      jsx:encode(Rep)
+  end;
 write(Obj, [{format, Format}|Config]) ->
   write(Obj, [{format, Format}, {handler, ?MODULE}|Config]).
