@@ -1,7 +1,6 @@
 -module(transit_marshaler).
 -include_lib("transit_format.hrl").
 
--export([write_sep/1, emit_array_start/1, emit_array_end/1, emit_map_start/1, emit_map_end/1]).
 -export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
 
@@ -62,62 +61,6 @@ flatten_map([{K,V}|Tail]) ->
   [K,V|flatten_map(Tail)];
 flatten_map([]) ->
   [].
-
--spec emit_array_start(Env) ->
-  {ArrayStart, Env} when ArrayStart::bitstring(), Env::env().
-emit_array_start(S) ->
-  {Sep, S1} = write_sep(S),
-  {<<Sep/bitstring, "[">>, push_level(S1)}.
-
--spec emit_array_end(Env) ->
-  {ArrayEnd, Env} when ArrayEnd::bitstring(), Env::env().
-emit_array_end(S) ->
-  S1 = pop_level(S),
-  {<<"]">>, S1}.
-
--spec emit_map_start(Env) ->
-  {MapStart, Env} when MapStart::bitstring(), Env::env().
-emit_map_start(S) ->
-  {Sep, S1} = write_sep(S),
-  {<<Sep/bitstring, "{">>, push_map(S1)}.
-
--spec emit_map_end(Env) ->
-  {MapEnd, Env} when MapEnd::bitstring(), Env::env().
-emit_map_end(S) ->
-  {<<"}">>, pop_level(S)}.
-
--spec push_level(S) -> S when S::env().
-push_level(Env=#env{started=S}) ->
-  Env#env{started=queue:in(true, S)}.
-
--spec pop_level(S) -> S when S:: env().
-pop_level(Env=#env{started=S, is_key=K}) ->
-  {_, S1} = queue:out_r(S),
-  {_, K1} = queue:out_r(K),
-  Env#env{started=S1, is_key=K1}.
-
--spec push_map(S) -> S when S::env().
-push_map(State=#env{started=S, is_key=K}) ->
-  State#env{started=queue:in(true, S), is_key=queue:in(true, K)}.
-
--spec write_sep(S) -> {bitstring(), S} when S::env().
-write_sep(Env=#env{started=S, is_key=K}) ->
-  case queue:out_r(S) of
-    {{value, true}, S1} ->
-      S2 = queue:in(false, S1),
-      {<<"">>, Env#env{started=S2}};
-    _ ->
-      case queue:out_r(K) of
-        {{value, true}, K1} ->
-          K2 = queue:in(false, K1),
-          {<<":">>, Env#env{is_key=K2}};
-        {{value, false}, K1} ->
-          K2 = queue:in(true, K1),
-          {<<",">>, Env#env{is_key=K2}};
-        {empty, K} ->
-          {<<",">>, Env}
-      end
-  end.
 
 quote_string(Str) ->
   EscapeSlash = re:replace(Str, "\\\\", "\\\\"),
@@ -181,7 +124,7 @@ marshal_top(M, Object, Conf) ->
                    true ->
                      marshal(M, Object, Env)
                 end,
-  Ret.
+  jsx:encode(Ret).
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, Obj, S) ->
@@ -232,9 +175,7 @@ marshal(Name, Obj, S) ->
   end.
 
 new_env() ->
-  Cache = transit_rolling_cache:empty(json),
-  S = queue:from_list([true]),
-  #env{started=S, cache=Cache}.
+  #env{cache=transit_rolling_cache:empty(json)}.
 
 -spec new_env({atom(), module()}) -> env().
 new_env({Format, CustomHandler}) ->

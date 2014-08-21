@@ -47,15 +47,13 @@ emit_float(Rep, Env) ->
 -spec emit_tagged(Rep, Env) ->
   {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
 
-emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
-  {ArrayStart, S0} = transit_marshaler:emit_array_start(Env),
+emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S0) ->
   Cache = transit_marshaler:cache(S0),
   {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
   S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
   {Body, S3} =  transit_marshaler:marshal(?MODULE, Rep, S2),
-  {ArrayEnd, S4} = transit_marshaler:emit_array_end(S3),
-  {<<ArrayStart/bitstring, Tag1/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S4}.
+  {[Tag1, Body], S3}.
 
 -spec emit_encoded(Tag, Rep, Env) ->
   {Rep, Env} when Tag::bitstring(), Rep::bitstring(), Env::transit_marshaler:env().
@@ -77,20 +75,15 @@ emit_string(Tag, String, Env) ->
 
 -spec emit_object(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
-emit_object(Obj, S) ->
-  {Sep, S1} = transit_marshaler:write_sep(S),
-  Body = if is_bitstring(Obj) ->
-              transit_marshaler:quote_string(Obj);
-            is_integer(Obj) ->
-              integer_to_binary(Obj);
-            is_float(Obj) ->
-              transit_utils:double_to_binary(Obj);
+emit_object(Obj, S1) ->
+  Body = if is_bitstring(Obj); is_integer(Obj); is_float(Obj) ->
+              Obj;
             is_atom(Obj) ->
               case Obj of
                 undefined ->
-                  <<"null">>;
+                  null;
                 _ ->
-                  list_to_binary(atom_to_list(Obj))
+                  Obj
               end;
             true ->
               case io_lib:printable_list(Obj) of
@@ -100,32 +93,28 @@ emit_object(Obj, S) ->
                   exit(unidentified_write)
               end
          end,
-  {<<Sep/bitstring, Body/bitstring>>, S1}.
+  {Body, S1}.
 
 emit_map(M, S) ->
   A = [?MAP_AS_ARR|transit_marshaler:flatten_map(M)],
-  {ArrayStart, S1} = transit_marshaler:emit_array_start(S),
   {Body, S2, _} = lists:foldl(fun (E, {In, NS, AsMapKey}) ->
                                NS1 = transit_marshaler:force_as_map_key(AsMapKey, NS),
                                {NE, NS2} = transit_marshaler:marshal(?MODULE, E, NS1),
-                               {<<In/bitstring, NE/bitstring>>, NS2, not AsMapKey}
+                               {[NE|In], NS2, not AsMapKey}
                            end,
-                           {<<>>, S1, false}, A),
-  {ArrayEnd, S3} = transit_marshaler:emit_array_end(S2),
-  {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
+                           {[], S, false}, A),
+  {lists:reverse(Body), S2}.
 
 emit_cmap(M, S) ->
   emit_tagged(#tagged_value{tag=?CMap, rep=transit_marshaler:flatten_map(M)}, S).
 
 emit_array(A, S) ->
-  {ArrayStart, S1} = transit_marshaler:emit_array_start(S),
   {Body, S2} = lists:foldl(fun (E, {In, NS1}) ->
                         {NE, NS2} = transit_marshaler:marshal(?MODULE, E, NS1),
-                        {<<In/bitstring, NE/bitstring>>, NS2}
+                        {[NE|In], NS2}
                     end,
-                    {<<>>, S1}, A),
-  {ArrayEnd, S3} = transit_marshaler:emit_array_end(S2),
-  {<<ArrayStart/bitstring, Body/bitstring, ArrayEnd/bitstring>>, S3}.
+                    {[], S}, A),
+  {lists:reverse(Body), S2}.
 
 handler(_Obj) -> undefined.
 
@@ -162,7 +151,9 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",\"~~hello\"]">>, "~hello"},
            {<<"[\"~#'\",\"~$hello\"]">>, transit_types:symbol("hello")}
           ],
-  [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
+  [fun() -> {Raw, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env),
+            Res = jsx:encode(Raw)
+   end || {Res, Rep} <- Tests].
 
 marshals_extend(_Env) ->
   Tests = [{<<"[]">>, []},

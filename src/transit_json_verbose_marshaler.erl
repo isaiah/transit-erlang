@@ -10,16 +10,22 @@
 
 -spec emit_map(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
-emit_map(M, Env) ->
-  {MapStart, S1} = transit_marshaler:emit_map_start(Env),
+emit_map(M, S1) when is_map(M) ->
   {Body, S2} = maps:fold(fun (K, V, {In, NS1}) ->
                         {MK, NS2} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_as_map_key(true, NS1)),
                         {MV, NS3} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_as_map_key(false, NS2)),
-                        {<<In/bitstring, MK/bitstring, MV/bitstring>>, NS3}
+                        {[{MK, MV}|In], NS3}
                     end,
-                    {<<>>, S1}, M),
-  {MapEnd, S3} = transit_marshaler:emit_map_end(S2),
-  {<<MapStart/bitstring, Body/bitstring, MapEnd/bitstring>>, S3}.
+                    {[], S1}, M),
+  {Body, S2};
+emit_map([], Env) ->
+  {[], Env};
+emit_map([{K,V}|Tail], Env) ->
+  {MK, NS1} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_as_map_key(true, Env)),
+  {MV, NS2} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_as_map_key(false, NS1)),
+  {MTail, NS3} = emit_map(Tail, NS2),
+  {[{MK, MV}|MTail], NS3}.
+
 emit_cmap(M, Env) ->
   transit_json_marshaler:emit_cmap(M, Env).
 
@@ -27,17 +33,15 @@ emit_string(Tag, Rep, Env) ->
   Escaped = transit_marshaler:escape(Rep),
   emit_object(<<Tag/bitstring, Escaped/bitstring>>, Env).
 
-emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, Env) ->
-  {MapStart, S} = transit_marshaler:emit_map_start(Env),
+emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S) ->
   S0 = transit_marshaler:force_as_map_key(true, S),
-  Cache = transit_marshaler:cache(Env),
+  Cache = transit_marshaler:cache(S),
   {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
   S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
   S3 = transit_marshaler:force_as_map_key(false, S2),
   {Body, S4} =  transit_marshaler:marshal(?MODULE, Rep, S3),
-  {MapEnd, S5} = transit_marshaler:emit_map_end(S4),
-  {<<MapStart/bitstring, Tag1/bitstring, Body/bitstring, MapEnd/bitstring>>, S5}.
+  {[{Tag1, Body}], S4}.
 
 %%% delegate to transit_json_marshaler
 emit_object(Rep, Env) ->
@@ -90,11 +94,14 @@ marshals_tagged(Env) ->
   Tests = [{<<"{\"~#'\":\"foo\"}">>, "foo"},
            {<<"{\"~#'\":\"foo\"}">>, <<"foo">>},
            {<<"{\"~#'\":1234}">>, 1234}],
-  [fun() -> {Res, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env) end || {Res, Rep} <- Tests].
+  [fun() -> {Raw, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env),
+            Res = jsx:encode(Raw)
+   end || {Res, Rep} <- Tests].
 
 marshals_extend(_Env) ->
   Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
-           {<<"{\"~i3\":4,\"a\":\"b\"}">>, #{3 => 4, "a" => "b"}},
+           {<<"{\"a\":\"b\",\"~i3\":4}">>, #{3 => 4, "a" => "b"}},
+           {<<"{\"a\":\"b\",\"~i3\":4}">>, [{"a","b"},{3,4}]},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
            {<<"{\"~d3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> Res = transit_marshaler:marshal_top(?MODULE, Rep, {json_verbose, ?MODULE}) end || {Res, Rep} <- Tests].

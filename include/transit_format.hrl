@@ -42,10 +42,8 @@
 
 -type tagged_value() :: #tagged_value{}.
 
--record(env, {started = queue:new() :: queue:queue(boolean()),
-              is_key = queue:new() :: queue:queue(boolean()),
-              as_map_key=false :: boolean(),
-              cache :: pid(),
+-record(env, {as_map_key=false :: boolean(),
+              cache :: transit_rolling_cache:cache(),
               custom_handler :: module()
              }).
 
