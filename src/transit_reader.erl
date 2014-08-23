@@ -17,8 +17,10 @@ read(Name, [{format, Format}|_Config]) ->
           msgpack ->
             {ok, R} = msgpack:unpack(Name, [{format, jsx}]),
             R;
+          F when F == json; F == json_verbose ->
+            jsx:decode(Name);
           _ ->
-            jsx:decode(Name)
+            error(badarg)
         end,
   {Val, _Cache} = decode(Cache, Rep, false),
   Val.
