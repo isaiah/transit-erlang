@@ -18,4 +18,3 @@ marshaler(msgpack) -> transit_json_marshaler.
 pack(msgpack, Rep) -> msgpack:pack(Rep, [{format, jsx}]);
 pack(json, Rep) -> jsx:encode(Rep);
 pack(json_verbose, Rep) -> jsx:encode(Rep).
-

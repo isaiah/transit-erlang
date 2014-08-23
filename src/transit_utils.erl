@@ -46,11 +46,13 @@ iso_8601_to_timestamp(Rep) ->
 ms_to_timestamp(Milliseconds) ->
   {Milliseconds div 1000000000,
    Milliseconds div 1000 rem 1000000,
-   Milliseconds rem 1000}.
+   (Milliseconds rem 1000) * 1000}.
 
 -spec timestamp_to_ms(erlang:timestamp()) -> integer().
 timestamp_to_ms({Mega, Sec, Micro}) ->
-  (Mega*1000000+Sec)*1000 + Micro div 100000.
+  MegaSecs = Mega * 1000 * 1000,
+  Secs = MegaSecs + Sec,
+  (Secs * 1000) + (Micro div 1000).
 
 double_to_binary(Double) ->
   [Rep] = io_lib:format("~w", [Double]),
