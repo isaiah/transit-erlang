@@ -90,7 +90,7 @@ transit(N) ->
         {1, transit(0)},
         {N, ?LAZY(tuple(transit(N div 2)))},
         {N, ?LAZY(set(transit(N div 2)))},
-        {N, ?LAZY(transit_map(transit(N div 6), transit(N div 6)))}
+        {N, ?LAZY(transit_map(transit(N div 6), transit(N div 6)))},
         {N, ?LAZY(list(transit(N div 2)))}
     ]).
 
