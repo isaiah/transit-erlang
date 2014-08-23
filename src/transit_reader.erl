@@ -30,40 +30,33 @@ read(Name, [{format, Format}|_Config]) ->
 %% ------------------------------------------------------------------
 decode(Cache, Name, AsMapKey) when is_bitstring(Name) ->
   decode_string(Cache, Name, AsMapKey);
-decode(Cache, Name, AsMapKey) when is_list(Name) ->
-  case Name of
-    [?MAP_AS_ARR|Tail] ->
-      {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
-      {transit_utils:map_rep(L), C};
-    %%% If the output is from a verbose write, it will be encoded as a hash
-    [{Key,Val}] ->
-      case decode(Cache, Key, true) of
-        {{tag, Tag}, C1} ->
-          {DVal, C2} = decode(C1, Val, AsMapKey),
-          {decode_tag(Tag, DVal), C2};
-        {DKey, C1} ->
-          {DVal, C2} = decode(C1, Val, false),
-          {transit_utils:map_rep([{DKey, DVal}]), C2}
-      end;
-    [{_, _}|_] ->
-      {L, C} = decode_hash(Cache, Name, AsMapKey),
-      {transit_utils:map_rep(L), C};
-    [EscapedTag, Rep] when is_bitstring(EscapedTag) ->
-      {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
-      case OrigTag of
-        <<"~", "#", Tag/binary>> ->
-          {DRep, C1} = decode(C, Rep, AsMapKey),
-          {decode_tag(Tag, DRep), C1};
-        T ->
-          ct:pal("~p", [Cache]),
-          ct:pal("~p", [EscapedTag]),
-          ct:pal("~p", [T]),
-          ct:pal("~p", [Name]),
-          exit({unknown_tag, T})
-      end;
-    _ ->
-      decode_array(Cache, Name, AsMapKey)
+decode(Cache, [?MAP_AS_ARR|Tail], AsMapKey) ->
+  {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
+  {transit_utils:map_rep(L), C};
+%% If the output is from a verbose write, it will be encoded as a hash
+decode(Cache, [{Key, Val}], AsMapKey) ->
+  case decode(Cache, Key, true) of
+    {{tag, Tag}, C1} ->
+      {DVal, C2} = decode(C1, Val, AsMapKey),
+      {decode_tag(Tag, DVal), C2};
+    {DKey, C1} ->
+      {DVal, C2} = decode(C1, Val, false),
+      {transit_utils:map_rep([{DKey, DVal}]), C2}
   end;
+decode(Cache, [{_, _}|_] = Name, AsMapKey) ->
+  {L, C} = decode_hash(Cache, Name, AsMapKey),
+  {transit_utils:map_rep(L), C};
+decode(Cache, [EscapedTag, Rep], AsMapKey) when is_binary(EscapedTag) ->
+  {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
+  case OrigTag of
+    <<"~", "#", Tag/binary>> ->
+      {DRep, C1} = decode(C, Rep, AsMapKey),
+      {decode_tag(Tag, DRep), C1};
+    T ->
+      exit({unknown_tag, T})
+  end;
+decode(Cache, Name, AsMapKey) when is_list(Name) ->
+  decode_array(Cache, Name, AsMapKey);
 decode(Cache, Name, _AsMapKey) when Name =:= null ->
   {undefined, Cache};
 decode(Cache, Name, _AsMapKey) ->
@@ -73,24 +66,19 @@ decode_string(Cache, String, AsMapKey) ->
   {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
   {parse_string(OrigStr), Cache1}.
 
-parse_string(String) ->
-  case String of
-    <<"~",Tag:8/binary-unit:1, Rep/binary>> ->
-      case transit_read_handlers:handler(Tag) of
-        F when is_function(F) ->
-          F(Rep);
-        _ ->
-          if Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
-               <<Tag/binary,Rep/binary>>;
-             Tag =:= <<"#">> ->
-               {tag, Rep};
-             true ->
-               #tagged_value{tag=Tag, rep=Rep}
-          end
-      end;
+parse_string(<<"~",Tag:1/binary, Rep/binary>>) ->
+  case transit_read_handlers:handler(Tag) of
+    F when is_function(F) ->
+      F(Rep);
+    _ when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
+      <<Tag/binary, Rep/binary>>;
+    _ when Tag =:= <<"#">> ->
+      {tag, Rep};
     _ ->
-      String
-  end.
+      #tagged_value{tag=Tag, rep=Rep}
+  end;
+parse_string(String) ->
+  String.
 
 decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
   {DKey, C1} = decode(Cache, Key, true),
@@ -107,26 +95,21 @@ decode_array(Cache, Name, AsMapKey) ->
 
 decode_tag(Tag, Rep) ->
   case transit_read_handlers:handler(Tag) of
-    F when is_function(F) ->
-      F(Rep);
-    _ ->
-      transit_types:tv(Tag, Rep)
+    F when is_function(F) -> F(Rep);
+    _ -> transit_types:tv(Tag, Rep)
   end.
 
-decode_hash(Cache, Name, AsMapKey) when length(Name) =:= 1 ->
-  case Name of
-    [{Key, Val}] ->
-      case decode(Cache, Key, AsMapKey) of
-        {#tagged_value{tag=Tag}, C1} ->
-          {DecodedVal, C2} = decode(C1, Val, AsMapKey),
-          {decode_tag(Tag, DecodedVal), C2};
-        {DecodedKey, C3} ->
-          {Rep, C4} = decode(C3, Val, false),
-          {[{DecodedKey, Rep}], C4}
-      end;
-    _ ->
-      exit(unidentified_read)
+decode_hash(Cache, [{Key, Val}], AsMapKey) ->
+  case decode(Cache, Key, AsMapKey) of
+    {#tagged_value{tag=Tag}, C1} ->
+      {DecodedVal, C2} = decode(C1, Val, AsMapKey),
+      {decode_tag(Tag, DecodedVal), C2};
+    {DecodedKey, C3} ->
+      {Rep, C4} = decode(C3, Val, false),
+      {[{DecodedKey, Rep}], C4}
   end;
+decode_hash(_Cache, [_], _AsMapKey) ->
+  exit(unidentified_read);
 decode_hash(Cache, Name, _AsMapKey) ->
   lists:mapfoldl(fun({Key, Val}, C) ->
                       {DKey, C1} = decode(C, Key, true),
