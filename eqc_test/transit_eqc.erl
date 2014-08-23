@@ -24,7 +24,7 @@ atom() ->
     ?SHRINK(advanced_atom(),
             [simple_atom()]).
 
-timepoint() ->
+time_point() ->
     ?LET({Mega, Secs, Micros}, {int(), choose(0, 1000*1000 - 1), choose(0, 1000*1000 - 1)},
          {Mega, Secs, (Micros div 1000) * 1000}).
 
@@ -64,7 +64,7 @@ set(G) ->
          sets:from_list(L)).
 
 transit_time() ->
-    ?LET(TP, timepoint(),
+    ?LET(TP, time_point(),
          transit_types:datetime(TP)).
 
 transit_map(KeyG, ValueG) ->
@@ -108,6 +108,14 @@ gen_iso(Format) ->
 prop_iso_json() -> gen_iso(json).
 prop_iso_json_verbose() -> gen_iso(json_verbose).
 prop_iso_msgpack() -> gen_iso(msgpack).
+
+prop_time() ->
+    ?FORALL(TP, time_point(),
+      begin
+          Coded = transit_utils:timestamp_to_ms(TP),
+          Decoded = transit_utils:ms_to_timestamp(Coded),
+          Decoded =:= TP
+      end).
 
 %% Running tests
 %%
