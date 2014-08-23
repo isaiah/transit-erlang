@@ -3,16 +3,43 @@
 -include_lib("eqc/include/eqc.hrl").
 -compile(export_all).
 
+%% Generate a valid atom in Erlang land (we can't handle utf8 yet here before R18
+
+simple_atom() -> elements([a,b,c,d,e,f]).
+advanced_atom() ->
+    ?LET(L, list(choose(0,255)),
+         list_to_atom(L)).
+
+hex_char() ->
+    elements([$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $0, $a, $b, $c, $d, $e, $f]).
+
+hex_string(N) ->
+    vector(N, hex_char()).
+
+uuid() ->
+    ?LET({S1, S2, S3, S4, S5}, {hex_string(8), hex_string(4), hex_string(4), hex_string(4), hex_string(12)},
+         iolist_to_binary([S1, $-, S2, $-, S3, $-, S4, $-, S5])).
+
 atom() ->
-    oneof([a,b,c,d,e]).
+    ?SHRINK(advanced_atom(),
+            [simple_atom()]).
 
 timepoint() ->
     ?LET({Mega, Secs, Micros}, {int(), choose(0, 1000*1000 - 1), choose(0, 1000*1000 - 1)},
-         {Mega, Secs, Micros}).
+         {Mega, Secs, (Micros div 1000) * 1000}).
 
 null() -> return(undefined).
 %% string() -> binary().
-string() -> oneof([<<"hello">>, <<"world">>]).
+
+%% code_point/0 generates a valid utf-8 code point.
+%% There is a plane which is not allowed, so kill it
+code_point() ->
+    ?SUCHTHAT(CP, choose(0, 1000*1000),
+        (CP < 16#d800 orelse CP > 16#dfff)).
+
+string() ->
+    ?LET(CodePoints, list(code_point()),
+        unicode:characters_to_binary(CodePoints)).
 
 keyword() -> atom().
 
@@ -20,24 +47,52 @@ symbol() ->
     ?LET(Sym, oneof([binary(), list(char()), atom()]),
         transit_types:symbol(Sym)).
 
-integer() -> int().
+large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
 
-time() ->
+integer() ->
+    oneof([
+        int(),
+        largeint()
+    ]).
+
+tuple(G) ->
+    ?LET(L, list(G),
+         list_to_tuple(L)).
+
+set(G) ->
+    ?LET(L, list(G),
+         sets:from_list(L)).
+
+transit_time() ->
     ?LET(TP, timepoint(),
          transit_types:datetime(TP)).
+
+transit_map(KeyG, ValueG) ->
+    ?LET(PL, list({KeyG, ValueG}),
+      maps:from_list(PL)).
+
+transit_uuid() ->
+    ?LET(UUID, uuid(),
+         transit_types:uuid(UUID)).
 
 transit(0) ->
     oneof([
         null(),
         string(),
         integer(),
-        keyword(),
-        symbol()]);
-transit(_N) ->
+        transit_uuid(),
+        transit_time(),
+        symbol(),
+        keyword()
+    ]);
+transit(N) ->
     frequency([
-        {1, transit(0)}]).
-%%        {N, ?LAZY(?LETSHRINK([T], [transit(N-1)],
-%%            transit(T)))}]).
+        {1, transit(0)},
+        {N, ?LAZY(tuple(transit(N div 2)))},
+        {N, ?LAZY(set(transit(N div 2)))},
+        {N, ?LAZY(transit_map(transit(N div 6), transit(N div 6)))}
+        {N, ?LAZY(list(transit(N div 2)))}
+    ]).
 
 term() ->
     ?SIZED(Size, transit(Size)).
@@ -47,15 +102,12 @@ gen_iso(Format) ->
         begin
             Data = transit:write(T, [{format, Format}]),
             T2 = transit:read(Data, [{format, Format}]),
-            eq(T, T2)
+            T =:= T2
         end).
 
 prop_iso_json() -> gen_iso(json).
 prop_iso_json_verbose() -> gen_iso(json_verbose).
 prop_iso_msgpack() -> gen_iso(msgpack).
-
-eq(T, T) -> true;
-eq(T, U) -> {T, '/=', U}.
 
 %% Running tests
 %%
