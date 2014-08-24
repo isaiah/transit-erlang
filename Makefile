@@ -8,6 +8,10 @@ compile:
 test: compile
 	rebar get_deps=false eunit ct
 
+# EQC
+eqc-ci: compile
+	erlc -o ebin test/*_eqc.erl
+
 # Deps directory.
 
 DEPS_DIR ?= $(CURDIR)/deps
