@@ -43,10 +43,18 @@ iso_8601_to_timestamp(Rep) ->
   ms_to_timestamp(Secs * 1000 + lists:last(DateTime)).
 
 -spec ms_to_timestamp(integer()) -> erlang:timestamp().
-ms_to_timestamp(Milliseconds) ->
-  {Milliseconds div 1000000000,
-   Milliseconds div 1000 rem 1000000,
-   (Milliseconds rem 1000) * 1000}.
+ms_to_timestamp(Ms) when Ms < 0 ->
+    case ms_to_timestamp(-1 * Ms) of
+        {0,0,Us} -> {0, 0, -1 * Us};
+        {0, Secs, Us} -> {0, -1 * Secs, Us};
+        {M, S, Us} -> {-1 * M, S, Us}
+    end;
+ms_to_timestamp(Ms) ->
+  Micros = (Ms rem 1000) * 1000,
+  Secs = Ms div 1000,
+  Megas = Secs div (1000 * 1000),
+  Seconds = Secs rem (1000 * 1000),
+  {Megas, Seconds, Micros}.
 
 -spec timestamp_to_ms(erlang:timestamp()) -> integer().
 timestamp_to_ms({Mega, Sec, Micro}) ->
