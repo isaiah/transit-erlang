@@ -10,6 +10,7 @@ test: compile
 
 # EQC
 eqc-ci: compile
+	rebar get-deps
 	erlc -o ebin test/*_eqc.erl
 
 # Deps directory.
