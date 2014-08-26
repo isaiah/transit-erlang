@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := test
 
+.PHONY: deps
+deps:
+	rebar get-deps
+
 .PHONY: compile
 compile:
 	rebar compile
@@ -9,8 +13,7 @@ test: compile
 	rebar get_deps=false eunit ct
 
 # EQC
-eqc-ci: compile
-	rebar get-deps
+eqc-ci: deps compile
 	erlc -o ebin test/*_eqc.erl
 
 # Deps directory.
