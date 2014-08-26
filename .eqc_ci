@@ -1,1 +1,4 @@
 {build, "make eqc-ci"}.
+{deps, "deps/jsx/ebin"}.
+{deps, "deps/msgpack/ebin"}.
+
