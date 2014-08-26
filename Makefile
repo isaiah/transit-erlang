@@ -14,7 +14,7 @@ test: compile
 
 # EQC
 eqc-ci: deps compile
-	erlc -o ebin test/*_eqc.erl
+	erlc -o ebin eqc_test/*_eqc.erl
 
 # Deps directory.
 
