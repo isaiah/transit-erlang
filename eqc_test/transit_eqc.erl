@@ -55,6 +55,7 @@ integer() ->
         largeint()
     ]).
 
+
 tuple(G) ->
     ?LET(L, list(G),
          list_to_tuple(L)).
@@ -109,13 +110,24 @@ prop_iso_json() -> gen_iso(json).
 prop_iso_json_verbose() -> gen_iso(json_verbose).
 prop_iso_msgpack() -> gen_iso(msgpack).
 
-prop_time() ->
-    ?FORALL(TP, time_point(),
-      begin
-          Coded = transit_utils:timestamp_to_ms(TP),
-          Decoded = transit_utils:ms_to_timestamp(Coded),
-          Decoded =:= TP
-      end).
+iso_time(T) ->
+    Coded = transit_utils:timestamp_to_ms(T),
+    Decoded = transit_utils:ms_to_timestamp(Coded),
+    Decoded =:= T.
+
+prop_time() -> ?FORALL(TP, time_point(), iso_time(TP)).
+
+iso(F, T) ->
+    Data = transit:write(T, [{format, F}]),
+    T2 = transit:read(Data, [{format, F}]),
+    T =:= T2.
+      
+prop_integer() -> ?FORALL(I, integer(), iso(json, I)).
+prop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
+prop_string() -> ?FORALL(S, string(), iso(json, S)).
+prop_keyword() -> ?FORALL(KW, keyword(), iso(json, KW)).
+prop_symbol() -> ?FORALL(S, symbol(), iso(json, S)).
+
 
 %% Running tests
 %%
