@@ -76,24 +76,16 @@ emit_string(Tag, String, Env) ->
 -spec emit_object(Rep, Env) ->
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
 emit_object(Obj, S1) ->
-  Body = if is_bitstring(Obj); is_integer(Obj); is_float(Obj) ->
-              Obj;
-            is_atom(Obj) ->
-              case Obj of
-                undefined ->
-                  null;
-                _ ->
-                  Obj
-              end;
-            true ->
-              case io_lib:printable_list(Obj) of
-                true ->
-                  transit_marshaler:quote_string(Obj);
-                false ->
-                  exit(unidentified_write)
-              end
-         end,
-  {Body, S1}.
+  {emit_object_(Obj), S1}.
+  
+emit_object_(O) when is_binary(O); is_integer(O); is_float(O) -> O;
+emit_object_(undefined) -> null;
+emit_object_(A) when is_atom(A) -> A;
+emit_object_(O) ->
+    case io_lib:printable_list(O) of
+      true -> transit_marshaler:quote_string(O);
+      false -> exit(unidentified_write)
+    end.
 
 emit_map(M, S) ->
   A = [?MAP_AS_ARR|transit_marshaler:flatten_map(M)],
