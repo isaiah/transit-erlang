@@ -17,9 +17,16 @@ emit_map(M, S1) when is_map(M) ->
                         {[{MK, MV}|In], NS3}
                     end,
                     {[], S1}, M),
-  {Body, S2};
+  case Body of
+    [] ->
+      {[{}], S2}; % handle of empty map
+    _ ->
+      {Body, S2}
+  end;
 emit_map([], Env) ->
   {[], Env};
+emit_map([{}], Env) ->
+  {[{}], Env};
 emit_map([{K,V}|Tail], Env) ->
   {MK, NS1} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_as_map_key(true, Env)),
   {MV, NS2} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_as_map_key(false, NS1)),
@@ -99,7 +106,9 @@ marshals_tagged(Env) ->
    end || {Res, Rep} <- Tests].
 
 marshals_extend(_Env) ->
-  Tests = [{<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
+  Tests = [{<<"{}">>, [{}]},
+           {<<"{}">>, #{}},
+           {<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
            {<<"{\"a\":\"b\",\"~i3\":4}">>, #{3 => 4, "a" => "b"}},
            {<<"{\"a\":\"b\",\"~i3\":4}">>, [{"a","b"},{3,4}]},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},

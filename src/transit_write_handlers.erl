@@ -99,6 +99,8 @@ datetime_string_rep(D=#transit_datetime{}) ->
 
 handler([]) ->
   #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1};
+handler([{}]) ->
+  #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler([{_,_},_]) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_boolean(Data) ->

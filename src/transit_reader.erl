@@ -148,6 +148,7 @@ unmarshal_quoted(C) ->
 unmarshal_extend(C) ->
   Tests = [{[[c, undefined]], <<"[[\"~:c\",null]]">>},
            {[], <<"[]">>},
+           {[{}], <<"{}">>},
            {maps:from_list([{<<"foo">>, <<"bar">>}]), <<"{\"foo\":\"bar\"}">>},
            {maps:from_list([{<<"a">>, <<"b">>}, {3, 4}]), <<"[\"^ \",\"a\",\"b\",3,4]">>},
            {maps:from_list([{a, b}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},

@@ -57,6 +57,8 @@ flatten_map(M) when is_map(M) ->
                 [K, V| In]
             end, [], M);
 %%% flatten proplists style map
+flatten_map([{}]) ->
+  [];
 flatten_map([{K,V}|Tail]) ->
   [K,V|flatten_map(Tail)];
 flatten_map([]) ->
@@ -187,6 +189,8 @@ stringable_keys(Rep) when is_map(Rep) ->
   lists:all(fun(X) ->
                 bit_size(transit_write_handlers:tag(X)) =:= 8
             end, maps:keys(Rep));
+stringable_keys([{}]) ->
+  true;
 stringable_keys([]) ->
   true;
 stringable_keys([{K, _}|T]) ->
