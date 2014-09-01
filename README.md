@@ -47,7 +47,7 @@ Default type mapping
 |time|transit\_types:datetime()|transit\_types:datetime()|
 |uri|transit\_types.URI|transit\_types.URI|
 |uuid|uuid.UUID|uuid.UUID|
-|array|list, tuple|tuple|
+|array|list|list|
 |list|transit\_types:list()|transit\_types:list()|
 |set|sets, gb_sets, ordsets|sets|
 |map|proplists, map|map, proplists|
