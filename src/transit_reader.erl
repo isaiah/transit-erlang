@@ -46,14 +46,14 @@ decode(Cache, [{Key, Val}], AsMapKey) ->
 decode(Cache, [{_, _}|_] = Name, AsMapKey) ->
   {L, C} = decode_hash(Cache, Name, AsMapKey),
   {transit_utils:map_rep(L), C};
-decode(Cache, [EscapedTag, Rep], AsMapKey) when is_binary(EscapedTag) ->
+decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
   {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
   case OrigTag of
     <<"~", "#", Tag/binary>> ->
       {DRep, C1} = decode(C, Rep, AsMapKey),
       {decode_tag(Tag, DRep), C1};
-    T ->
-      exit({unknown_tag, T})
+    _ ->
+      decode_array(C, Name, AsMapKey)
   end;
 decode(Cache, Name, AsMapKey) when is_list(Name) ->
   decode_array(Cache, Name, AsMapKey);
@@ -129,7 +129,8 @@ unmarshal_test_() ->
   {foreach,
    fun start_server/0,
    fun stop_server/1,
-   [fun unmarshal_quoted/1]}.
+   [fun unmarshal_quoted/1,
+    fun unmarshal_extend/1]}.
 
 unmarshal_quoted(C) ->
   Tests = [{1, <<"[\"~#'\", 1]">>},
@@ -138,16 +139,20 @@ unmarshal_quoted(C) ->
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
            {<<"~hello">>, <<"[\"~#'\",\"~~hello\"]">>},
-           {[], <<"[]">>},
            {transit_types:symbol(<<"hello">>), <<"[\"~#'\",\"~$hello\"]">>},
-           {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>},
+           {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>}
            %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
-           {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
+          ],
+  [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
+
+unmarshal_extend(C) ->
+  Tests = [{[[c, undefined]], <<"[[\"~:c\",null]]">>},
+           {[], <<"[]">>},
            {maps:from_list([{<<"foo">>, <<"bar">>}]), <<"{\"foo\":\"bar\"}">>},
            {maps:from_list([{<<"a">>, <<"b">>}, {3, 4}]), <<"[\"^ \",\"a\",\"b\",3,4]">>},
            {maps:from_list([{a, b}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
-           {maps:from_list([{foo, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}
-          ],
+           {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
+           {maps:from_list([{foo, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}],
   [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
 parse_string_test_() ->
