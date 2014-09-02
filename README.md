@@ -33,21 +33,21 @@ transit:write(#{"a" => "b", 3 => 4}, [{format, msgpack}]).
 Default type mapping
 --------------------
 
-|Transit type|Write accepts|Read returns|
-|------------|-------------|------------|
-|null|undefined|undefined|
-|string|binary()|binary()|
-|boolean|true, false|true, false|
-|integer|integer()|integer()|
-|decimal|float()|float()|
-|keyword|atom()|atom()|
-|symbol|transit\_types:symbol()|transit\_types:symbol()|
-|big decimal|float()|float()|
-|big integer|integer()|integer()|
-|time|transit\_types:datetime()|transit\_types:datetime()|
-|uri|transit\_types.URI|transit\_types.URI|
-|uuid|uuid.UUID|uuid.UUID|
-|array|list|list|
-|list|transit\_types:list()|transit\_types:list()|
-|set|sets, gb_sets, ordsets|sets|
-|map|proplists, map|map, proplists|
+| Transit type | Write accepts             | Read returns              |
+| ------------ | -------------             | ------------              |
+| null         | undefined                 | undefined                 |
+| string       | binary()                  | binary()                  |
+| boolean      | true, false               | true, false               |
+| integer      | integer()                 | integer()                 |
+| decimal      | float()                   | float()                   |
+| keyword      | atom()                    | atom()                    |
+| symbol       | transit\_types:symbol()   | transit\_types:symbol()   |
+| big decimal  | float()                   | float()                   |
+| big integer  | integer()                 | integer()                 |
+| time         | transit\_types:datetime() | transit\_types:datetime() |
+| uri          | transit\_types.URI        | transit\_types.URI        |
+| uuid         | uuid.UUID                 | uuid.UUID                 |
+| array        | list                      | list                      |
+| list         | transit\_types:list()     | transit\_types:list()     |
+| set          | sets, gb\_sets, ordsets   | sets                      |
+| map          | proplists, map            | map, proplists            |
