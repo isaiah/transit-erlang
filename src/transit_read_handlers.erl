@@ -41,7 +41,12 @@ handler(?List) ->
   end;
 handler(?Keyword) ->
   fun(Rep) ->
-      binary_to_atom(Rep, utf8)
+      case Rep of
+        <<"~", Esc/binary>> ->
+          binary_to_atom(Esc, utf8);
+        _ ->
+          binary_to_atom(Rep, utf8)
+      end
   end;
 handler(?Symbol) ->
   fun(Rep) ->
