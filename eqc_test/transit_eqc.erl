@@ -7,7 +7,7 @@
 
 simple_atom() -> elements([a,b,c,d,e,f]).
 advanced_atom() ->
-    ?LET(L, list(choose(0,255)),
+    ?LET(L, list(choose(0,127)),
          list_to_atom(L)).
 
 atom() ->
