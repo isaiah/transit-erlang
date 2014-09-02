@@ -2,5 +2,5 @@ clean:
 	rm *.beam
 
 console:
-	erl -pa ../ebin ../deps/*/ebin
+	erl +pc unicode -pa ../ebin ../deps/*/ebin
 

@@ -10,16 +10,6 @@ advanced_atom() ->
     ?LET(L, list(choose(0,255)),
          list_to_atom(L)).
 
-hex_char() ->
-    elements([$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $0, $a, $b, $c, $d, $e, $f]).
-
-hex_string(N) ->
-    vector(N, hex_char()).
-
-uuid() ->
-    ?LET({S1, S2, S3, S4, S5}, {hex_string(8), hex_string(4), hex_string(4), hex_string(4), hex_string(12)},
-         iolist_to_binary([S1, $-, S2, $-, S3, $-, S4, $-, S5])).
-
 atom() ->
     ?SHRINK(advanced_atom(),
             [simple_atom()]).
@@ -33,16 +23,6 @@ time_point_ms() ->
 
 null() -> return(undefined).
 %% string() -> binary().
-
-%% code_point/0 generates a valid utf-8 code point.
-%% There is a plane which is not allowed, so kill it
-code_point() ->
-    ?SUCHTHAT(CP, choose(0, 1000*1000),
-        (CP < 16#d800 orelse CP > 16#dfff)).
-
-string() ->
-    ?LET(CodePoints, list(code_point()),
-        unicode:characters_to_binary(CodePoints)).
 
 keyword() -> atom().
 
@@ -59,9 +39,7 @@ integer() ->
     ]).
 
 
-tuple(G) ->
-    ?LET(L, list(G),
-         list_to_tuple(L)).
+array(G) -> list(G).
 
 set(G) ->
     ?LET(L, list(G),
@@ -76,13 +54,13 @@ transit_map(KeyG, ValueG) ->
       maps:from_list(PL)).
 
 transit_uuid() ->
-    ?LET(UUID, uuid(),
+    ?LET(UUID, eqc_lib:uuid(),
          transit_types:uuid(UUID)).
 
 transit(0) ->
     oneof([
         null(),
-        string(),
+        eqc_lib:utf8_string(),
         integer(),
         transit_uuid(),
         transit_time(),
@@ -92,7 +70,7 @@ transit(0) ->
 transit(N) ->
     frequency([
         {1, transit(0)},
-        {N, ?LAZY(tuple(transit(N div 2)))},
+        {N, ?LAZY(array(transit(N div 2)))},
         {N, ?LAZY(set(transit(N div 2)))},
         {N, ?LAZY(transit_map(transit(N div 6), transit(N div 6)))},
         {N, ?LAZY(list(transit(N div 2)))}
@@ -120,7 +98,7 @@ iso(F, T) ->
       
 prop_integer() -> ?FORALL(I, integer(), iso(json, I)).
 prop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
-prop_string() -> ?FORALL(S, string(), iso(json, S)).
+prop_string() -> ?FORALL(S, eqc_lib:utf8_string(), iso(json, S)).
 prop_keyword() -> ?FORALL(KW, keyword(), iso(json, KW)).
 prop_symbol() -> ?FORALL(S, symbol(), iso(json, S)).
 
