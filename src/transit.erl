@@ -1,8 +1,12 @@
 -module(transit).
--export([write/2, read/2]).
+-export([read/1, read/2, write/1, write/2]).
+
+read(Rep) -> read(Rep, [{format, json}]).
 
 read(Rep, Opts) ->
   transit_reader:read(Rep, Opts).
+
+write(Rep) -> write(Rep, [{format, json}]).
 
 write(Rep, Opts) ->
   transit_writer:write(Rep, Opts).
