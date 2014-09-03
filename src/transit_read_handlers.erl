@@ -7,29 +7,19 @@ handler(?CMap) ->
   fun(Rep) ->
       transit_utils:map_rep(list_to_proplist(Rep))
   end;
-handler(?Null) ->
-  fun(_) -> undefined end;
+handler(?Null) -> fun(_) -> undefined end;
 handler(?Boolean) ->
-  fun(Rep) ->
-    case Rep of
-      "t" -> true;
-      "f" -> false
-    end
+  fun
+    ("t") -> true;
+    ("f") -> false
   end;
-handler(?Int) ->
-  fun binary_to_integer/1;
-handler(?Float) ->
-  fun binary_to_float/1;
-handler(?BigInt) ->
-  fun binary_to_integer/1;
+handler(?Int) -> fun binary_to_integer/1;
+handler(?Float) -> fun binary_to_float/1;
+handler(?BigInt) -> fun binary_to_integer/1;
 handler(?QUOTE) ->
-  fun(Rep) ->
-      case Rep of
-        null ->
-          undefined;
-        _ ->
-          Rep
-      end
+  fun
+    (null) -> undefined;
+    (Rep) -> Rep
   end;
 handler(?Set) ->
   fun(Rep) ->
@@ -40,13 +30,9 @@ handler(?List) ->
       transit_types:list(Rep)
   end;
 handler(?Keyword) ->
-  fun(Rep) ->
-      case Rep of
-        <<"~", Esc/binary>> ->
-          binary_to_atom(Esc, utf8);
-        _ ->
-          binary_to_atom(Rep, utf8)
-      end
+  fun
+    (<<"~", Esc/binary>>) -> binary_to_atom(Esc, utf8);
+    (Rep) -> binary_to_atom(Rep, utf8)
   end;
 handler(?Symbol) ->
   fun(Rep) ->

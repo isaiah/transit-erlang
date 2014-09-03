@@ -28,7 +28,7 @@ read(Name, [{format, Format}|_Config]) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-decode(Cache, Name, AsMapKey) when is_bitstring(Name) ->
+decode(Cache, Name, AsMapKey) when is_binary(Name) ->
   decode_string(Cache, Name, AsMapKey);
 decode(Cache, [?MAP_AS_ARR|Tail], AsMapKey) ->
   {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
@@ -66,19 +66,17 @@ decode_string(Cache, String, AsMapKey) ->
   {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
   {parse_string(OrigStr), Cache1}.
 
-parse_string(<<"~",Tag:1/binary, Rep/binary>>) ->
+parse_string(<<"~", Tag:1/binary, Rep/binary>>)
+  when Tag =:= ?ESC;
+       Tag =:= ?SUB;
+       Tag =:= ?RES -> <<Tag/binary, Rep/binary>>;
+parse_string(<<"~#", Rep/binary>>) -> {tag, Rep};
+parse_string(<<"~", Tag:1/binary, Rep/binary>>) ->
   case transit_read_handlers:handler(Tag) of
-    F when is_function(F) ->
-      F(Rep);
-    _ when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
-      <<Tag/binary, Rep/binary>>;
-    _ when Tag =:= <<"#">> ->
-      {tag, Rep};
-    _ ->
-      #tagged_value{tag=Tag, rep=Rep}
+    F when is_function(F) -> F(Rep);
+    undefined             -> #tagged_value { tag = Tag, rep = Rep }
   end;
-parse_string(String) ->
-  String.
+parse_string(S) -> S.
 
 decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
   {DKey, C1} = decode(Cache, Key, true),
