@@ -27,7 +27,7 @@ null() -> return(undefined).
 keyword() -> atom().
 
 symbol() ->
-    ?LET(Sym, oneof([binary(), list(char()), atom()]),
+    ?LET(Sym, atom(),
         transit_types:symbol(Sym)).
 
 large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
