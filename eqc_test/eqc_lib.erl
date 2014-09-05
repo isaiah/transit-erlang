@@ -34,7 +34,8 @@ code_point_bmp() ->
         valid_codepoint(CP)).
 
 code_point_supplementary() ->
-    choose(16#010000, 16#10FFFF).
+    ?SUCHTHAT(CP, choose(16#010000, 16#10FFFF),
+        valid_codepoint(CP)).
     
  code_point() ->
      frequency([
