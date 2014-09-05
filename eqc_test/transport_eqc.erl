@@ -59,9 +59,9 @@ json_term_mp(0) ->
     ]);
 json_term_mp(N) ->
 	frequency([
-		{1, json_term(0)},
-		{N, ?LAZY(list(json_term(N div 2)))},
-		{N, ?LAZY(json_mp_map(json_term(N div 2)))}
+		{1, json_term_mp(0)},
+		{N, ?LAZY(list(json_term_mp(N div 4)))},
+		{N, ?LAZY(json_map(json_term_mp(N div 4)))}
 	]).
 
 iso_jsx(T) ->
@@ -70,12 +70,13 @@ iso_jsx(T) ->
     D =:= T.
 
 iso_msgpack(T) ->
-    E = msgpack:pack(T, [{format, map}]),
-    {ok, D} = msgpack:unpack(E),
+    Opts = [{format, map}],
+    E = msgpack:pack(T, Opts),
+    {ok, D} = msgpack:unpack(E, Opts),
     D =:= T.
 
 prop_iso_mp() ->
-    ?FORALL(T, json_term(),
+    ?FORALL(T, json_term_mp(),
         iso_msgpack(T)).
         
 prop_string_mp() ->
