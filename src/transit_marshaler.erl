@@ -65,7 +65,6 @@ quote_string(Str) ->
 
 -spec escape(binary()) -> binary().
 escape(?MAP_AS_ARR) -> ?MAP_AS_ARR;
-escape(<<$\\, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(<<$^, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(<<$~, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(<<$`, _/binary>> = S) -> <<?ESC/binary, S/binary>>;

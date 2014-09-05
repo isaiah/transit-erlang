@@ -31,7 +31,6 @@ handler(?List) ->
   end;
 handler(?Keyword) ->
   fun
-    (<<"~", Esc/binary>>) -> binary_to_atom(Esc, utf8);
     (Rep) -> binary_to_atom(Rep, utf8)
   end;
 handler(?Symbol) ->
