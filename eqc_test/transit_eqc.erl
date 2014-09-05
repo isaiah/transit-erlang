@@ -6,9 +6,9 @@
 %% Generate a valid atom in Erlang land (we can't handle utf8 yet here before R18
 
 simple_atom() -> elements([a,b,c,d,e,f]).
-advanced_atom() ->
-    ?LET(L, list(choose(0,127)),
-         list_to_atom(L)).
+advanced_atom() -> 
+  ?LET(Vec, vector(2, choose(0, 127)),
+    list_to_atom(Vec)).
 
 atom() ->
     ?SHRINK(advanced_atom(),
