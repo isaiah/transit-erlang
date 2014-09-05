@@ -1,7 +1,7 @@
 -module(transit_marshaler).
 -include_lib("transit_format.hrl").
 
--export([flatten_map/1, quote_string/1, escape/1, is_escapable/1, as_map_key/1, force_as_map_key/2]).
+-export([flatten_map/1, quote_string/1, escape/1, as_map_key/1, force_as_map_key/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
 
 -callback emit_null(Rep, Env) ->
@@ -53,51 +53,29 @@
 
 %%% flatten R17 map
 flatten_map(M) when is_map(M) ->
-  maps:fold(fun(K, V, In) ->
-                [K, V| In]
-            end, [], M);
-%%% flatten proplists style map
-flatten_map([{}]) ->
-  [];
-flatten_map([{K,V}|Tail]) ->
-  [K,V|flatten_map(Tail)];
-flatten_map([]) ->
-  [].
+  maps:fold(fun(K, V, In) ->  [K, V| In] end, [], M);
+flatten_map([{}]) -> [];
+flatten_map([{K,V}|Tail]) -> [K,V|flatten_map(Tail)];
+flatten_map([]) -> [].
 
 quote_string(Str) ->
   EscapeSlash = re:replace(Str, "\\\\", "\\\\"),
   EscapeQuote = re:replace(EscapeSlash, "\\\"", "\\\""),
   <<"\"", EscapeQuote/bitstring, "\"">>.
 
--spec escape(bitstring()) -> bitstring().
+-spec escape(binary()) -> binary().
+escape(?MAP_AS_ARR) -> ?MAP_AS_ARR;
 escape(S) ->
-  if S =:= ?MAP_AS_ARR ->
-       S;
-     true ->
-       case is_escapable(S) of
-         true ->
-           <<?ESC/bitstring,S/bitstring>>;
-         false ->
-           S
-       end
-  end.
-
--spec is_escapable(bitstring()) -> boolean().
-is_escapable(S) ->
-  case re:run(S, bitstring_to_list(<<"^\\", ?SUB/bitstring, "|", ?ESC/bitstring,"|",?RES/bitstring>>)) of
-    {match, _} ->
-      true;
-    _ ->
-      false
-  end.
+    case re:run(S, binary_to_list(<<"^\\", ?SUB/binary, "|", ?ESC/binary,"|",?RES/binary>>)) of
+        {match, _} -> <<?ESC/binary, S/binary>>;
+        _ -> S
+    end.
 
 -spec as_map_key(env()) -> boolean().
-as_map_key(_Env=#env{as_map_key=K}) ->
-  K.
+as_map_key(#env{ as_map_key = K }) -> K.
 
 -spec cache(env()) -> pid().
-cache(_Env=#env{cache=C}) ->
-  C.
+cache( #env{ cache = C }) -> C.
 
 force_as_map_key(AsMapKey, Env) ->
   Env#env{as_map_key=AsMapKey}.
@@ -105,28 +83,26 @@ force_as_map_key(AsMapKey, Env) ->
 find_handler(Obj, M, Env) ->
   case M:handler(Obj) of
     undefined ->
-      case transit_write_handlers:handler(Obj) of
-        undefined ->
-          CustomHandler = Env#env.custom_handler,
-          CustomHandler:handler(Obj);
-        Handler ->
-          Handler
-      end;
-    Handler ->
-      Handler
+      find_handler_default_handlers(Obj, Env);
+    Handler -> Handler
+  end.
+
+find_handler_default_handlers(Obj, #env { custom_handler = CHandler }) ->
+  case transit_write_handlers:handler(Obj) of
+    undefined -> CHandler:handler(Obj);
+    Handler -> Handler
   end.
 
 marshal_top(M, Object, Conf) ->
   Env = new_env(Conf),
-  Handler = find_handler(Object, M, Env),
-  TagFun = Handler#write_handler.tag,
-  Tag = TagFun(Object),
-  {Ret, _Env} = if bit_size(Tag) =:= 8 ->
-                     M:emit_tagged(#tagged_value{tag=?QUOTE, rep=Object}, Env);
-                   true ->
-                     marshal(M, Object, Env)
-                end,
+  #write_handler { tag = TagFun } = find_handler(Object, M, Env),
+  {Ret, _Env} = marshal_top_output(M, Object, Env, TagFun(Object)),
   Ret.
+  
+marshal_top_output(M, Object, Env, Tag) when bit_size(Tag) == 8 ->
+  M:emit_tagged(#tagged_value { tag = ?QUOTE, rep = Object}, Env);
+marshal_top_output(M, Object, Env, _) ->
+  marshal(M, Object, Env).
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, Obj, S) ->
@@ -200,11 +176,3 @@ stringable_keys([{K, _}|T]) ->
     false ->
       false
   end.
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-is_escapeable_test() ->
-  ?assertNot(is_escapable(<<"foo">>)),
-  ?assert(is_escapable(<<"^ foo">>)).
--endif.
