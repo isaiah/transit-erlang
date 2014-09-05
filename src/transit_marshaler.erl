@@ -65,11 +65,11 @@ quote_string(Str) ->
 
 -spec escape(binary()) -> binary().
 escape(?MAP_AS_ARR) -> ?MAP_AS_ARR;
-escape(S) ->
-    case re:run(S, binary_to_list(<<"^\\", ?SUB/binary, "|", ?ESC/binary,"|",?RES/binary>>)) of
-        {match, _} -> <<?ESC/binary, S/binary>>;
-        _ -> S
-    end.
+escape(<<$\\, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
+escape(<<$^, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
+escape(<<$~, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
+escape(<<$`, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
+escape(S) -> S.
 
 -spec as_map_key(env()) -> boolean().
 as_map_key(#env{ as_map_key = K }) -> K.
