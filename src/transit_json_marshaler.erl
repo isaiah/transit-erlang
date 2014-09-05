@@ -47,7 +47,7 @@ emit_float(Rep, Env) ->
 -spec emit_tagged(Rep, Env) ->
   {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
 
-emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S0) ->
+emit_tagged(#tagged_value{tag=Tag, rep=Rep}, S0) ->
   Cache = transit_marshaler:cache(S0),
   {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
   S1 = S0#env{cache=Cache1},

@@ -10,11 +10,10 @@ custom_handler_test() ->
   ?assertEqual(<<"[\"~#point\",[1.5,2.5]]">>, transit_writer:write(P, [{format,json},{handler, ?MODULE}])).
 
 %%% custom handler callback
-handler(Obj) ->
-  case is_record(Obj, point) of
-    true ->
-      #write_handler{tag=fun(_) -> <<"point">> end,
-                     rep=fun(#point{x=X, y=Y}) -> [X, Y] end};
-    false ->
-      undefined
-  end.
+handler(#point{}) ->
+    #write_handler {
+      tag = fun(_) -> <<"point">> end,
+      rep = fun(#point { x = X, y = Y}) -> [X, Y] end
+    };
+handler(_) ->
+    undefined.

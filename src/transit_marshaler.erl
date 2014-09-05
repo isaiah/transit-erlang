@@ -99,58 +99,45 @@ marshal_top(Mod, Object, Conf) ->
   {Ret, _Env} = marshal_top_output(Mod, Object, Env, TagFun(Object)),
   Ret.
   
-marshal_top_output(Mod, Object, Env, <<_:8>>) ->
+marshal_top_output(Mod, Object, Env, Tag) when byte_size(Tag) == 1 ->
   Mod:emit_tagged(#tagged_value { tag = ?QUOTE, rep = Object}, Env);
 marshal_top_output(Mod, Object, Env, _) ->
   marshal(Mod, Object, Env).
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
-marshal(Name, Obj, S) ->
-  Handler = find_handler(Name, Obj, S),
-  TagFun = Handler#write_handler.tag,
-  RepFun = case S#env.as_map_key of
-                true ->
-                  Handler#write_handler.string_rep;
-                false ->
-                  Handler#write_handler.rep
-              end,
 
-  Rep = RepFun(Obj),
-  case TagFun(Obj) of
-    ?Null ->
-      Name:emit_null(Rep, S);
-    ?Boolean ->
-      Name:emit_boolean(Rep, S);
-    ?Int ->
-      Name:emit_int(Rep, S);
-    ?Float ->
-      Name:emit_float(Rep, S);
-    ?Array ->
-      Name:emit_array(Rep, S);
-    ?Map ->
-      case stringable_keys(Rep) of
-        true ->
-          Name:emit_map(Rep, S);
-        false ->
-          Name:emit_cmap(Rep, S)
-      end;
-    ?String when is_bitstring(Rep) ->
-      Name:emit_string(<<>>, Rep, S);
-    ?String ->
-      Name:emit_string(<<>>, list_to_binary(Rep), S);
-    T when bit_size(T) =:= 8 ->
-      BinaryRep = case is_list(Rep) of
-                    true ->
-                      list_to_binary(Rep);
-                    false ->
-                      F = Handler#write_handler.string_rep,
-                      F(Obj)
-                  end,
-      Name:emit_string(<<?ESC/bitstring, T/bitstring>>, BinaryRep, S);
-    T ->
-      Name:emit_encoded(T, Rep, S)
-
+marshal(Mod, Obj, #env { as_map_key = AsMapKey } = S) ->
+  #write_handler { tag = TagFun,
+                   string_rep = StringRep,
+                   rep = Repr } = find_handler(Mod, Obj, S),
+  Rep = case AsMapKey of
+          true -> StringRep(Obj);
+          false -> Repr(Obj)
+        end,
+  case emit_ground(Mod, Rep, S, TagFun(Obj)) of
+    {extension, Tag} when is_list(Rep), byte_size(Tag) == 1 ->
+      Bin = list_to_binary(Rep),
+      Mod:emit_string(<<?ESC/binary, Tag/binary>>, Bin, S);
+    {extension, Tag} when byte_size(Tag) == 1 ->
+      Mod:emit_string(<<?ESC/binary, Tag/binary>>, StringRep(Obj), S);
+    {extension, Tag} ->
+      Mod:emit_encoded(Tag, Rep, S);
+    V -> V
   end.
+  
+emit_ground(Mod, Rep, S, ?Null) -> Mod:emit_null(Rep, S);
+emit_ground(Mod, Rep, S, ?Boolean) -> Mod:emit_boolean(Rep, S);
+emit_ground(Mod, Rep, S, ?Int) -> Mod:emit_int(Rep, S);
+emit_ground(Mod, Rep, S, ?Float) -> Mod:emit_float(Rep, S);
+emit_ground(Mod, Rep, S, ?Array) -> Mod:emit_array(Rep, S);
+emit_ground(Mod, Rep, S, ?String) when is_binary(Rep) -> Mod:emit_string(<<>>, Rep, S);
+emit_ground(Mod, Rep, S, ?String) -> Mod:emit_string(<<>>, list_to_binary(Rep), S);
+emit_ground(Mod, Rep, S, ?Map) ->
+  case stringable_keys(Rep) of
+    true -> Mod:emit_map(Rep, S);
+    false -> Mod:emit_cmap(Rep, S)
+  end;
+emit_ground(_Mod, _Rep, _S, T) -> {extension, T}.
 
 new_env() ->
   #env{cache=transit_rolling_cache:empty(json)}.
