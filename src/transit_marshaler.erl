@@ -80,8 +80,8 @@ cache( #env{ cache = C }) -> C.
 force_as_map_key(AsMapKey, Env) ->
   Env#env{as_map_key=AsMapKey}.
 
-find_handler(Obj, M, Env) ->
-  case M:handler(Obj) of
+find_handler(Mod, Obj, Env) ->
+  case Mod:handler(Obj) of
     undefined ->
       find_handler_default_handlers(Obj, Env);
     Handler -> Handler
@@ -93,20 +93,20 @@ find_handler_default_handlers(Obj, #env { custom_handler = CHandler }) ->
     Handler -> Handler
   end.
 
-marshal_top(M, Object, Conf) ->
+marshal_top(Mod, Object, Conf) ->
   Env = new_env(Conf),
-  #write_handler { tag = TagFun } = find_handler(Object, M, Env),
-  {Ret, _Env} = marshal_top_output(M, Object, Env, TagFun(Object)),
+  #write_handler { tag = TagFun } = find_handler(Mod, Object, Env),
+  {Ret, _Env} = marshal_top_output(Mod, Object, Env, TagFun(Object)),
   Ret.
   
-marshal_top_output(M, Object, Env, Tag) when bit_size(Tag) == 8 ->
-  M:emit_tagged(#tagged_value { tag = ?QUOTE, rep = Object}, Env);
-marshal_top_output(M, Object, Env, _) ->
-  marshal(M, Object, Env).
+marshal_top_output(Mod, Object, Env, <<_:8>>) ->
+  Mod:emit_tagged(#tagged_value { tag = ?QUOTE, rep = Object}, Env);
+marshal_top_output(Mod, Object, Env, _) ->
+  marshal(Mod, Object, Env).
 
 -spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
 marshal(Name, Obj, S) ->
-  Handler = find_handler(Obj, Name, S),
+  Handler = find_handler(Name, Obj, S),
   TagFun = Handler#write_handler.tag,
   RepFun = case S#env.as_map_key of
                 true ->
