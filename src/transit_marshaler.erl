@@ -148,18 +148,13 @@ new_env({Format, CustomHandler}) ->
   Cache = transit_rolling_cache:empty(Format),
   Env#env{custom_handler=CustomHandler, cache=Cache}.
 
-stringable_keys(Rep) when is_map(Rep) ->
-  lists:all(fun(X) ->
-                bit_size(transit_write_handlers:tag(X)) =:= 8
-            end, maps:keys(Rep));
-stringable_keys([{}]) ->
-  true;
-stringable_keys([]) ->
-  true;
+stringable_keys(#{} = Rep) -> 
+  lists:all(fun(X) -> byte_size(transit_write_handlers:tag(X)) =:= 1 end,
+            maps:keys(Rep));
+stringable_keys([{}]) -> true;
+stringable_keys([]) -> true;
 stringable_keys([{K, _}|T]) ->
-  case bit_size(transit_write_handlers:tag(K)) =:= 8 of
-    true ->
-      stringable_keys(T);
-    false ->
-      false
+  case byte_size(transit_write_handlers:tag(K)) =:= 1 of
+    true -> stringable_keys(T);
+    false -> false
   end.
