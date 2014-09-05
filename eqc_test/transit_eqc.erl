@@ -87,9 +87,9 @@ gen_iso(Format) ->
             T =:= T2
         end).
 
-prop_iso_json() -> gen_iso(json).
-prop_iso_json_verbose() -> gen_iso(json_verbose).
-prop_iso_msgpack() -> gen_iso(msgpack).
+disabled_prop_iso_json() -> gen_iso(json).
+disabled_prop_iso_json_verbose() -> gen_iso(json_verbose).
+disabled_prop_iso_msgpack() -> gen_iso(msgpack).
 
 iso(F, T) ->
     Data = transit:write(T, [{format, F}]),
