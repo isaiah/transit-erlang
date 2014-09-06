@@ -16,17 +16,17 @@ erl -pa ebin deps/*/ebin
 ```
 
 ```erlang
-A = transit:write(#{"a" => "b", 3 => 4}, [{format, json}]).
+A = transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, json}]).
 %% => <<"[\"^ \",\"a\",\"b\",3,4]">>
 transit:read(A, [{format, json}]).
-%% => [{"a", "b"}, {3, 4}]
+%% => #{<<"a">> => <<"b">>, 3 => 4}
 
 %%% JSON Verbose mode
-transit:write(#{"a" => "b", 3 => 4}, [{format, json_verbose}]).
+transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, json_verbose}]).
 %% => <<"{\"~i3\":4,\"a\":\"b\"}">>
 
 %%% msgpack
-transit:write(#{"a" => "b", 3 => 4}, [{format, msgpack}]).
+transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, msgpack}]).
 %% => <<149,162,94,32,161,97,161,98,163,126,105,51,4>>
 ```
 
@@ -50,4 +50,4 @@ Default type mapping
 | array        | list                      | list                      |
 | list         | transit\_types:list()     | transit\_types:list()     |
 | set          | sets, gb\_sets, ordsets   | sets                      |
-| map          | proplists, map            | map, proplists            |
+| map          | map                       | map                       |
