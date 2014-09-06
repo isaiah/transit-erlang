@@ -98,7 +98,7 @@ marshals_extention_test_() ->
    ]}.
 
 marshals_tagged(Env) ->
-  Tests = [{<<"{\"~#'\":\"foo\"}">>, "foo"},
+  Tests = [{<<"{\"~#'\":[102,111,111]}">>, "foo"},
            {<<"{\"~#'\":\"foo\"}">>, <<"foo">>},
            {<<"{\"~#'\":1234}">>, 1234}],
   [fun() -> {Raw, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env),
@@ -108,9 +108,8 @@ marshals_tagged(Env) ->
 marshals_extend(_Env) ->
   Tests = [{<<"{}">>, [{}]},
            {<<"{}">>, #{}},
-           {<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
-           {<<"{\"a\":\"b\",\"~i3\":4}">>, #{3 => 4, "a" => "b"}},
-           {<<"{\"a\":\"b\",\"~i3\":4}">>, [{"a","b"},{3,4}]},
+           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, a]},
+           {<<"{\"a\":\"b\",\"~i3\":4}">>, #{3 => 4, <<"a">> => <<"b">>}},
            {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
            {<<"{\"~d3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> Res = jsx:encode(transit_marshaler:marshal_top(?MODULE, Rep, {json_verbose, ?MODULE})) end || {Res, Rep} <- Tests].

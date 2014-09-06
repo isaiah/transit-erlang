@@ -132,7 +132,7 @@ marshals_extention_test_() ->
    ]}.
 
 marshals_tagged(Env) ->
-  Tests = [{<<"[\"~#'\",\"foo\"]">>, "foo"},
+  Tests = [{<<"[\"~#'\",[102,111,111]]">>, "foo"},
            {<<"[\"~#'\",\"foo\"]">>, <<"foo">>},
            {<<"[\"~#'\",null]">>, undefined},
            {<<"[\"~#'\",1234]">>, 1234},
@@ -145,7 +145,7 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",\"~i9007199254740993\"]">>,9007199254740993},
            {<<"[\"~#'\",\"~n1\"]">>,transit_types:bigint(1)},
            %{<<"[\"~#'\",\"~n9223372036854775806\"]">>,9223372036854775806},
-           {<<"[\"~#'\",\"~~hello\"]">>, "~hello"},
+           {<<"[\"~#'\",[126,104,101,108,108,111]]">>, "~hello"},
            {<<"[\"~#'\",\"~$hello\"]">>, transit_types:symbol("hello")}
           ],
   [fun() -> {Raw, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env),
@@ -158,22 +158,20 @@ marshals_extend(_Env) ->
            {<<"[\"^ \"]">>, #{}},
            %{<<"[\"\"]">>, [""]},
            {<<"[\"\"]">>, [<<"">>]},
-           {<<"[\"a\",2,\"~:a\"]">>, ["a", 2, a]},
+           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, a]},
            {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, #{a => b, 3 => 4}},
-           {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, #{"a" => "b", 3 => 4}},
-           {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, [{a, b}, {3, 4}]},
-           {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, [{"a", "b"}, {3, 4}]},
+           {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, #{<<"a">> => <<"b">>, 3 => 4}},
            {<<"[[\"^ \",\"foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
-             [#{"foobar" =>"foobar"},#{"foobar" =>"foobar"}]},
+             [#{ <<"foobar">> => <<"foobar">>},#{ <<"foobar">> => <<"foobar">>}]},
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
-             [#{foobar =>"foobar"},#{foobar =>"foobar"}]},
+             [#{foobar => <<"foobar">>},#{foobar => <<"foobar">>}]},
            {<<"[\"~:atom-1\"]">>, ['atom-1']},
-           {<<"[\"~~hello\"]">>, ["~hello"]},
+           {<<"[\"~~hello\"]">>, [<<"~hello">>]},
            {<<"[\"~rhttp://google.com\"]">>, [transit_types:uri("http://google.com")]},
            {<<"[\"~u531a379e-31bb-4ce1-8690-158dceb64be6\"]">>, [transit_types:uuid("531a379e-31bb-4ce1-8690-158dceb64be6")]},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
            {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary("c3VyZS4=")]},
-           {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list(["foo", "bar", "baz"])}
+           {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>])}
           ],
   [fun() -> Res = jsx:encode(transit_marshaler:marshal_top(?MODULE, Rep, {json, ?MODULE})) end || {Res, Rep} <- Tests].
 -endif.
