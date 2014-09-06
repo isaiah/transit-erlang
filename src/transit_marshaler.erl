@@ -156,4 +156,5 @@ stringable_keys([{K, _}|T]) ->
   case byte_size(transit_write_handlers:tag(K)) =:= 1 of
     true -> stringable_keys(T);
     false -> false
-  end.
+  end;
+stringable_keys(_) -> false.
