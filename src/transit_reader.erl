@@ -53,7 +53,8 @@ decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
       {DRep, C1} = decode(C, Rep, AsMapKey),
       {decode_tag(Tag, DRep), C1};
     _ ->
-      decode_array(C, Name, AsMapKey)
+      %% Abort the above and decode as an array. Note the reference back to the original cache
+      decode_array(Cache, Name, AsMapKey)
   end;
 decode(Cache, Name, AsMapKey) when is_list(Name) ->
   decode_array(Cache, Name, AsMapKey);
@@ -86,10 +87,8 @@ decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
 decode_array_hash(Cache, [], _AsMapKey) ->
   {[], Cache}.
 
-decode_array(Cache, Name, AsMapKey) ->
-  lists:mapfoldl(fun(El, C) ->
-                     decode(C, El, AsMapKey)
-                 end, Cache, Name).
+decode_array(Cache, Obj, AsMapKey) ->
+  lists:mapfoldl(fun(El, C) -> decode(C, El, AsMapKey) end, Cache, Obj).
 
 decode_tag(Tag, Rep) ->
   case transit_read_handlers:handler(Tag) of
