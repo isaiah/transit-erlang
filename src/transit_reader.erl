@@ -56,9 +56,11 @@ decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
       %% Abort the above and decode as an array. Note the reference back to the original cache
       decode_array(Cache, Name, AsMapKey)
   end;
+decode(Cache, [{}], _AsMapKey) -> %% Important this matches before the list
+  {#{}, Cache};
 decode(Cache, Name, AsMapKey) when is_list(Name) ->
   decode_array(Cache, Name, AsMapKey);
-decode(Cache, Name, _AsMapKey) when Name =:= null ->
+decode(Cache, null, _AsMapKey) ->
   {undefined, Cache};
 decode(Cache, Name, _AsMapKey) ->
   {Name, Cache}.
