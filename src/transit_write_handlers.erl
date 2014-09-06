@@ -35,20 +35,12 @@ float_rep(F) ->
 float_string_rep(F) ->
   transit_utils:double_to_binary(F).
 
-%%% String handler
-string_tag(_) ->
+%%% binary handler
+binary_tag(_) ->
   ?String.
-string_rep(S) ->
+binary_rep(S) ->
   S.
-string_string_rep(S) ->
-  S.
-
-%%% bitstring handler
-bitstring_tag(_) ->
-  ?String.
-bitstring_rep(S) ->
-  S.
-bitstring_string_rep(S) ->
+binary_string_rep(S) ->
   S.
 
 
@@ -110,14 +102,9 @@ handler(Data) when is_float(Data) ->
 handler(Data) when is_integer(Data) ->
   #write_handler{tag = fun integer_tag/1, rep = fun integer_rep/1, string_rep = fun integer_string_rep/1};
 handler(Data) when is_list(Data) ->
-  case io_lib:printable_list(Data) of
-    true ->
-      #write_handler{tag = fun string_tag/1, rep = fun string_rep/1, string_rep = fun string_string_rep/1};
-    false ->
-      #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1}
-  end;
-handler(Data) when is_bitstring(Data) ->
-  #write_handler{tag = fun bitstring_tag/1, rep = fun bitstring_rep/1, string_rep = fun bitstring_string_rep/1};
+      #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1};
+handler(Data) when is_binary(Data) ->
+  #write_handler{tag = fun binary_tag/1, rep = fun binary_rep/1, string_rep = fun binary_string_rep/1};
 handler(Data) when is_map(Data) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
 handler(Data) when is_atom(Data) ->
