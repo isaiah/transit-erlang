@@ -28,7 +28,7 @@ is_set(Data) ->
 
 iso_8601_fmt(Timestamp) ->
   {_, _, Low} = Timestamp,
-  Millis = Low rem 1000,
+  Millis = Low div 1000,
   DateTime = calendar:now_to_universal_time(Timestamp),
   {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
   io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0BZ",
