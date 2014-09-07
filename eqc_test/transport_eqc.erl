@@ -42,8 +42,8 @@ json_term(0) ->
 json_term(N) ->
     frequency([
       {1, json_term(0)},
-      {N, ?LAZY(list(json_term(N div 2)))},
-      {N, ?LAZY(json_map(json_term(N div 2)))}
+      {N, ?LAZY(list(json_term(N div 4)))},
+      {N, ?LAZY(json_map(json_term(N div 4)))}
     ]).
 
 json_term_mp() ->
@@ -64,10 +64,18 @@ json_term_mp(N) ->
 		{N, ?LAZY(json_map(json_term_mp(N div 4)))}
 	]).
 
+normalize(L) when is_list(L) -> [normalize(X) || X <- L];
+normalize(M) when is_map(M) ->
+    case [{normalize(K), normalize(V)} || {K, V} <- maps:to_list(M)] of
+      [] -> [{}];
+      X -> X
+    end;
+normalize(X) -> X.
+
 iso_jsx(T) ->
     E = jsx:encode(T),
     D = jsx:decode(E),
-    D =:= T.
+    equals(D, normalize(T)).
 
 iso_msgpack(T) ->
     Opts = [{format, map}],
