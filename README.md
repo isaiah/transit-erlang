@@ -30,6 +30,11 @@ transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, msgpack}]).
 %% => <<149,162,94,32,161,97,161,98,163,126,105,51,4>>
 ```
 
+Current limitations
+--------------------
+
+* We can't generate a keyword 'true' due to the current mapping of atoms into keywords.
+
 Default type mapping
 --------------------
 
