@@ -32,7 +32,6 @@ time_point_ms() ->
          {Mega, Secs, (Micros div 1000) * 1000}).
 
 null() -> return(undefined).
-%% string() -> binary().
 
 keyword() -> atom().
 
@@ -43,13 +42,9 @@ symbol() ->
 large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
 
 integer() ->
-    oneof([
-        int(),
-        largeint()
-    ]).
+  ?SUCHTHAT(I, oneof([int(), eqc_lib:interesting_int(), largeint()]),
+    I /= -576460752303423488).
 
-
-array(G) -> list(G).
 
 set(G) ->
     ?LET(L, list(G),
