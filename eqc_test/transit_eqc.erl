@@ -35,7 +35,7 @@ null() -> return(undefined).
 keyword() -> atom().
 
 symbol() ->
-    ?LET(Sym, oneof([atom(), eqc_lib:utf8_string()]),
+    ?LETSHRINK([Sym], [oneof([atom(), eqc_lib:utf8_string()])],
         transit_types:symbol(Sym)).
 
 large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
@@ -49,12 +49,10 @@ set(G) ->
          sets:from_list(L)).
 
 transit_time() ->
-    ?LET(TP, time_point_ms(),
-         transit_types:datetime(TP)).
+    ?SHRINK(?LET(TP, time_point_ms(), transit_types:datetime(TP)), [null()]).
 
 transit_uuid() ->
-    ?LET(UUID, eqc_lib:uuid(),
-         transit_types:uuid(UUID)).
+    ?SHRINK(?LET(UUID, eqc_lib:uuid(), transit_types:uuid(UUID)), [null()]).
 
 transit(0) ->
     oneof([
@@ -71,19 +69,21 @@ transit(N) ->
         {1, transit(0)},
         {N, ?LAZY(
           ?LET(K, nat(),
-            ?LET(L, transit_l(K+1, N, fun(Sz) -> transit(Sz) end),
+            ?LET(L, transit_l(K+1, N, fun transit/1),
               t_shrink(L))))},
         {N, ?LAZY(
           ?LET(K, nat(),
-            ?LET(L, transit_l(K+1, N, fun(Sz) -> transit(Sz) end),
+            ?LET(L, transit_l(K+1, N, fun transit/1),
               t_shrink(sets:from_list(L)))))},
         {N, ?LAZY(?LET(K, nat(),
-                    ?LET(M, transit_l(K+1, N, fun transit_pair/1),
-                      maps:from_list(M))))}
+                    ?LETSHRINK([Ks, Vs], [transit_l(K+1, N div 2, fun transit/1),
+                                          transit_l(K+1, N div 2, fun transit/1)],
+                      maps:from_list(zip(Ks, Vs)))))}
     ]).
 
-transit_pair(N) ->
-    {t_shrink(transit(N div 2)), t_shrink(transit(N div 2))}.
+zip([] , _Bs) -> [];
+zip(_As, [])  -> [];
+zip([A|As], [B|Bs]) -> [{A, B} | zip(As, Bs)].
 
 transit_l(0, _N, _G) -> [];
 transit_l(1, N, G) -> ?LET(E, G(N), [E]);
