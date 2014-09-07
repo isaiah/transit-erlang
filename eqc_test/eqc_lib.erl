@@ -3,6 +3,16 @@
 -include_lib("eqc/include/eqc.hrl").
 -compile(export_all).
 
+sign() -> elements([1, -1]).
+
+pow(0, 0) -> 0;
+pow(_Base, 0) -> 1;
+pow(Base, N) -> Base * pow(Base, N-1).
+  
+interesting_int() ->
+    ?LET({Sign, PSign, Exponent, Perturb}, {sign(), sign(), choose(0, 128), nat()},
+        Sign * pow(2, Exponent) + PSign * Perturb).
+
 hex_char() ->
     elements([$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $0, $a, $b, $c, $d, $e, $f]).
 
@@ -22,7 +32,7 @@ non_character_codepoint(CP) ->
     end.
     
 surrogate_codepoint(CP) when CP >= 16#D800, CP =< 16#DFFF -> true;
-surrogate_codepoint(CP) -> false.
+surrogate_codepoint(_CP) -> false.
 
 valid_codepoint(CP) ->
     not (non_character_codepoint(CP) orelse surrogate_codepoint(CP)).
