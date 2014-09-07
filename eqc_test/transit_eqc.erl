@@ -6,23 +6,22 @@
 %% Generate a valid atom in Erlang land (we can't handle utf8 yet here before R18
 
 simple_atom() ->
+    elements([a, ab, abc, abcd, abcde, abcdef, abcdefg, abcdefghij, 'abcdef123__^~:']).
+    
+advanced_atom() ->
 	oneof([
-	  elements([a,b,c,d,e,f]),
+	  elements(['', '~^', '~u', '~n', '^ ', '^1', '^az', '$', '~$', '^$!~']),
+	  elements(
+	  ['d 6y_>\b\007',':\007=&1CUH','o!,:T(\\U','bl\r\037n\0222w',
+	   '\031\b\vFt8/D','P-\005kaUVK','\002-F<\vS\0320',
+	   '\026,g\027!WOP','x\b\bPIi9F','\007{\002\037yKcB']),
+      ?LET(C, choose(0, 127), list_to_atom([C])),
 	  elements([phineas, ferb, candace, doofenschmirtz, isabella, perry, major_monogram])
 	]).
 
-random_atoms() ->
-	elements(
-	  ['d 6y_>\b\007',':\007=&1CUH','o!,:T(\\U','bl\r\037n\0222w',
-	   '\031\b\vFt8/D','P-\005kaUVK','\002-F<\vS\0320',
-	   '\026,g\027!WOP','x\b\bPIi9F','\007{\002\037yKcB']).
-	
-advanced_atom() ->
-  random_atoms().
-
 atom() ->
-    ?SHRINK(advanced_atom(),
-            [simple_atom()]).
+  ?SHRINK(oneof([simple_atom(), advanced_atom()]),
+    [simple_atom()]).
 
 time_point() ->
     {nat(), choose(0, 1000*1000 - 1), choose(0, 1000*1000 - 1)}.
@@ -36,7 +35,7 @@ null() -> return(undefined).
 keyword() -> atom().
 
 symbol() ->
-    ?LET(Sym, atom(),
+    ?LET(Sym, oneof([atom(), eqc_lib:utf8_string()]),
         transit_types:symbol(Sym)).
 
 large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
@@ -45,7 +44,6 @@ integer() ->
   ?SUCHTHAT(I, oneof([int(), eqc_lib:interesting_int(), largeint()]),
     I /= -576460752303423488).
 
-
 set(G) ->
     ?LET(L, list(G),
          sets:from_list(L)).
@@ -53,10 +51,6 @@ set(G) ->
 transit_time() ->
     ?LET(TP, time_point_ms(),
          transit_types:datetime(TP)).
-
-transit_map(KeyG, ValueG) ->
-    ?LET(PL, list({KeyG, ValueG}),
-      maps:from_list(PL)).
 
 transit_uuid() ->
     ?LET(UUID, eqc_lib:uuid(),
@@ -75,15 +69,37 @@ transit(0) ->
 transit(N) ->
     frequency([
         {1, transit(0)},
-        {N, ?LAZY(?LET(L, nat(), vector(L+1, transit(N div (L+1)))))},
-        {N, ?LAZY(?LET(L, nat(),
-                    ?LET(V, vector(L+1, transit(N div (L+1))), sets:from_list(V))))},
-        {N, ?LAZY(?LET(L, nat(),
-                    ?LET({V1, V2}, {vector(L+1, transit(N div ((L+1) * 2))),
-                                    vector(L+1, transit(N div ((L+1) * 2)))},
-                      maps:from_list(lists:zip(V1, V2)))))}
+        {N, ?LAZY(
+          ?LET(K, nat(),
+            ?LET(L, transit_l(K+1, N, fun(Sz) -> transit(Sz) end),
+              t_shrink(L))))},
+        {N, ?LAZY(
+          ?LET(K, nat(),
+            ?LET(L, transit_l(K+1, N, fun(Sz) -> transit(Sz) end),
+              t_shrink(sets:from_list(L)))))},
+        {N, ?LAZY(?LET(K, nat(),
+                    ?LET(M, transit_l(K+1, N, fun transit_pair/1),
+                      maps:from_list(M))))}
     ]).
 
+transit_pair(N) ->
+    {t_shrink(transit(N div 2)), t_shrink(transit(N div 2))}.
+
+transit_l(0, _N, _G) -> [];
+transit_l(1, N, G) -> ?LET(E, G(N), [E]);
+transit_l(Sz, N, G) ->
+  ?LETSHRINK([L, R], [transit_l(Sz div 2, N div 2, G), transit_l(Sz div 2, N div 2, G)],
+    L ++ R).
+
+  
+t_shrink(T) -> ?SHRINK(T, [null()]).
+
+%% term/0 constructs a transit term
+%% Currently, the strategy for creating transit terms are not perfect w.r.t shrinking. What you want to do is to create binary trees
+%% of terms which you then flatten into lists whenever you have a list-like construction (Array, Set, Map, List, …). That way, we can
+%% define a shrinker which can throw away parts of the tree giving fast logarithmic shrinkage and removal. Furthermore, if you have
+%% a map of the form #{X => Y} it can be shrunk to X and Y respectively, so there is a way to unwrap the map in question. All of this
+%% is not done yet.      
 term() ->
     ?SIZED(Size, transit(Size)).
 
