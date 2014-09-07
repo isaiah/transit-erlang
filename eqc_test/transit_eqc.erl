@@ -75,32 +75,67 @@ transit(0) ->
 transit(N) ->
     frequency([
         {1, transit(0)},
-        {N, ?LAZY(array(transit(N div 4)))},
-        {N, ?LAZY(set(transit(N div 4)))},
-        {N, ?LAZY(transit_map(transit(N div 6), transit(N div 6)))},
-        {N, ?LAZY(list(transit(N div 4)))}
+        {N, ?LAZY(?LET(L, nat(), vector(L+1, transit(N div (L+1)))))},
+        {N, ?LAZY(?LET(L, nat(),
+                    ?LET(V, vector(L+1, transit(N div (L+1))), sets:from_list(V))))},
+        {N, ?LAZY(?LET(L, nat(),
+                    ?LET({V1, V2}, {vector(L+1, transit(N div ((L+1) * 2))),
+                                    vector(L+1, transit(N div ((L+1) * 2)))},
+                      maps:from_list(lists:zip(V1, V2)))))}
     ]).
 
 term() ->
     ?SIZED(Size, transit(Size)).
 
-gen_iso(Format) ->
-    ?FORALL(T, term(),
-        begin
-            Data = transit:write(T, [{format, Format}]),
-            T2 = transit:read(Data, [{format, Format}]),
-            T =:= T2
-        end).
+term_size(L) when is_list(L) -> lists:sum([term_size(E) || E <- L]);
+term_size(M) when is_map(M) ->
+    lists:sum([term_size(E) || E <- maps:keys(M)])
+  + lists:sum([term_size(E) || E <- maps:values(M)]);
+term_size(X) ->
+  case sets:is_set(X) of
+    true ->
+      lists:sum([term_size(E) || E <- sets:to_list(X)]);
+    false ->
+      1
+  end.
 
-prop_iso_json() -> gen_iso(json).
-prop_iso_json_verbose() -> gen_iso(json_verbose).
-prop_iso_msgpack() -> gen_iso(msgpack).
+term_type(null) -> [null];
+term_type(true) -> [bool];
+term_type(false) -> [bool];
+term_type(B) when is_binary(B) -> [string];
+term_type(A) when is_atom(A) -> [keyword];
+term_type(I) when is_integer(I) -> [int];
+term_type(F) when is_float(F) -> [float];
+term_type(L) when is_list(L) ->
+  Underlying = lists:flatten([term_type(K) || K <- L]),
+  lists:usort([list | Underlying]);
+term_type(M) when is_map(M) ->
+  Keys = lists:flatten([term_type(K) || K <- maps:keys(M)]),
+  Values = lists:flatten([term_type(K) || K <- maps:values(M)]),
+  lists:usort([map] ++ Keys ++ Values);
+term_type({tagged_value, <<"u">>, _}) -> [uuid];
+term_type({tagged_value, <<"$">>, _}) -> [symbol];
+term_type({transit_datetime,_}) -> [time];
+term_type(Ty) ->
+  case sets:is_set(Ty) of
+    true ->
+      Elems = lists:flatten([term_type(E) || E <- sets:to_list(Ty)]),
+      lists:usort([set | Elems]);
+    false ->
+      [unknown]
+  end.
 
 iso(F, T) ->
     Data = transit:write(T, [{format, F}]),
     T2 = transit:read(Data, [{format, F}]),
-    T =:= T2.
-      
+    collect(trunc(math:log10(term_size(T))),
+      aggregate(term_type(T),
+        equals(T, T2))).
+
+prop_iso_json() -> ?FORALL(T, term(), iso(json, T)).
+prop_iso_json_verbose() -> ?FORALL(T, term(), iso(json_verbose, T)).
+prop_iso_msgpack() -> ?FORALL(T, term(), iso(msgpack, T)).
+
 prop_integer() -> ?FORALL(I, integer(), iso(json, I)).
 prop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
 prop_string() -> ?FORALL(S, eqc_lib:utf8_string(), iso(json, S)).
@@ -131,7 +166,7 @@ prop_time() ->
 %%
 
 t(Format, {T, Unit}) ->
-    eqc:testing_time(eval_time(T, Unit), gen_iso(Format)).
+    eqc:testing_time(eval_time(T, Unit), ?FORALL(X, term(), iso(Format, X))).
 
 eval_time(N, h) -> eval_time(N*60, min);
 eval_time(N, min) -> eval_time(N*60, sec);
