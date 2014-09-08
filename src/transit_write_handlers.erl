@@ -78,8 +78,7 @@ keyword_tag(_K) ->
   ?Keyword.
 keyword_rep(K) ->
   K.
-keyword_string_rep(K) ->
-  list_to_binary(atom_to_list(K)).
+keyword_string_rep(K) -> atom_to_binary(K, utf8).
 
 %%% date handler
 datetime_tag(_D) ->
