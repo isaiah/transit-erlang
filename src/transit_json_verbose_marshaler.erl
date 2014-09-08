@@ -36,9 +36,11 @@ emit_map([{K,V}|Tail], Env) ->
 emit_cmap(M, Env) ->
   transit_json_marshaler:emit_cmap(M, Env).
 
-emit_string(Tag, Rep, Env) ->
+emit_string(<<>>, Rep, Env) ->
   Escaped = transit_marshaler:escape(Rep),
-  emit_object(<<Tag/bitstring, Escaped/bitstring>>, Env).
+  emit_object(Escaped, Env);
+emit_string(Tag, Rep, Env) ->
+  emit_object(<<Tag/binary, Rep/binary>>, Env).
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S) ->
   S0 = transit_marshaler:force_as_map_key(true, S),
