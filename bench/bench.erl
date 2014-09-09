@@ -28,10 +28,12 @@ run_read(N, Data) ->
 	transit:read(Data),
 	run_read(N-1, Data).
 	
+run_write(0, _Data) -> ok;
 run_write(N, Data) ->
 	transit:write(Data),
 	run_write(N-1, Data).
 
+run_iso(0, _Data) -> ok;
 run_iso(N, Data) ->
 	Read = transit:read(Data),
 	transit:write(Read),

@@ -30,6 +30,22 @@ transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, msgpack}]).
 %% => <<149,162,94,32,161,97,161,98,163,126,105,51,4>>
 ```
 
+Benchmarks
+--------------------
+
+These benchmarks are run on a Lenovo Thinkpad W540 with a 16 Gigabyte RAM configuration and the following CPU core:
+
+	Intel(R) Core(TM) i7-4900MQ CPU @ 2.80GHz
+
+Timings run 1000 rounds of encoding of the file `transit-format/examples/0.8/example.json` and then we divide down to get the
+encoder time for each round. This then forms the base benchmark.
+
+| Commit | Test | Timing μs |
+| ------ | ---- | --------- |
+| 3d3b04ee6aad | Read | 33140 |
+| 3d3b04ee6aad | Write | 10115 |
+| 3d3b04ee6aad | ISO | 21313 |
+
 Current limitations
 --------------------
 
