@@ -2,6 +2,7 @@
 
 -export([run/1, run/2]).
 -export([p/1]).
+-export([jsx/0, msgpack/0]).
 
 -define(ROUNDS, 300).
 -define(DATA, "../../transit-format/examples/0.8/example.json").
@@ -53,5 +54,24 @@ p(Format, File) ->
 	eprof:log("out.prof.txt"),
 	eprof:analyze().
 
+jsx() ->
+	{ok, Data} = file:read_file(?DATA),
+	{Timing, _} = timer:tc(fun() -> jsx(?ROUNDS, Data) end),
+	Timing / ?ROUNDS.
 
+jsx(0, _) -> ok;
+jsx(N, Data) ->
+	jsx:decode(Data),
+	jsx(N-1, Data).
 	
+msgpack() ->
+	{ok, Data} = file:read_file(?DATA),
+	R = transit:read(Data),
+	W = transit:write(R, [{format, msgpack}]),
+	{Timing, _} = timer:tc(fun() -> msgpack(?ROUNDS, W) end),
+	Timing / ?ROUNDS.
+
+msgpack(0, _) -> ok;
+msgpack(N, Data) ->
+	msgpack:unpack(Data, [{format, jsx}]),
+	msgpack(N-1, Data).
