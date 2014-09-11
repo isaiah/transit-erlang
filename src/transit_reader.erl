@@ -11,25 +11,33 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-read(Name, [{format, Format}|_Config]) ->
+read(Obj, Config) ->
+  Format = format(Config),
   Cache = transit_rolling_cache:empty(Format),
-  Rep = case Format of
-          msgpack ->
-            {ok, R} = msgpack:unpack(Name, [{format, jsx}]),
-            R;
-          F when F == json; F == json_verbose ->
-            jsx:decode(Name);
-          _ ->
-            error(badarg)
-        end,
-  {Val, _Cache} = decode(Cache, Rep, false),
-  Val.
+  
+  case unpack(Obj, Format) of
+    {ok, Rep} ->
+      {Val, _} = decode(Cache, Rep, false),
+      Val;
+    {error, unknown_format} ->
+      error(badarg)
+  end.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-decode(Cache, Name, AsMapKey) when is_binary(Name) ->
-  decode_string(Cache, Name, AsMapKey);
+
+unpack(Obj, msgpack) -> msgpack:unpack(Obj, [{format, jsx}]);
+unpack(Obj, json) -> {ok, jsx:decode(Obj)};
+unpack(Obj, json_verbose) -> {ok, jsx:decode(Obj)};
+unpack(_Obj, undefined) -> {error, unknown_format}.
+
+format(#{ format := F }) -> F;
+format(#{}) -> undefined;
+format(Config) when is_list(Config) ->
+    proplists:get_value(format, Config, undefined).
+
+decode(Cache, Str, AsMapKey) when is_binary(Str) -> decode_string(Cache, Str, AsMapKey);
 decode(Cache, [?MAP_AS_ARR|Tail], AsMapKey) ->
   {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
   {transit_utils:map_rep(L), C};
@@ -43,8 +51,8 @@ decode(Cache, [{Key, Val}], AsMapKey) ->
       {DVal, C2} = decode(C1, Val, false),
       {transit_utils:map_rep([{DKey, DVal}]), C2}
   end;
-decode(Cache, [{_, _}|_] = Name, AsMapKey) ->
-  {L, C} = decode_hash(Cache, Name, AsMapKey),
+decode(Cache, [{_, _}|_] = Obj, AsMapKey) ->
+  {L, C} = decode_hash(Cache, Obj, AsMapKey),
   {transit_utils:map_rep(L), C};
 decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
   {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
@@ -56,29 +64,18 @@ decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
       %% Abort the above and decode as an array. Note the reference back to the original cache
       decode_array(Cache, Name, AsMapKey)
   end;
-decode(Cache, [{}], _AsMapKey) -> %% Important this matches before the list
-  {#{}, Cache};
-decode(Cache, Name, AsMapKey) when is_list(Name) ->
-  decode_array(Cache, Name, AsMapKey);
-decode(Cache, null, _AsMapKey) ->
-  {undefined, Cache};
-decode(Cache, Name, _AsMapKey) ->
-  {Name, Cache}.
+decode(Cache, [{}], _AsMapKey) -> {#{}, Cache};
+decode(Cache, Obj, AsMapKey) when is_list(Obj) -> decode_array(Cache, Obj, AsMapKey);
+decode(Cache, null, _AsMapKey) -> {undefined, Cache};
+decode(Cache, Obj, _AsMapKey) -> {Obj, Cache}.
 
 decode_string(Cache, String, AsMapKey) ->
   {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
   {parse_string(OrigStr), Cache1}.
 
-parse_string(<<"~", Tag:1/binary, Rep/binary>>)
-  when Tag =:= ?ESC;
-       Tag =:= ?SUB;
-       Tag =:= ?RES -> <<Tag/binary, Rep/binary>>;
+parse_string(<<"~", Tag:1/binary, Rep/binary>>) when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES -> <<Tag/binary, Rep/binary>>;
 parse_string(<<"~#", Rep/binary>>) -> {tag, Rep};
-parse_string(<<"~", Tag:1/binary, Rep/binary>>) ->
-  case transit_read_handlers:handler(Tag) of
-    F when is_function(F) -> F(Rep);
-    undefined             -> #tagged_value { tag = Tag, rep = Rep }
-  end;
+parse_string(<<"~", Tag:1/binary, Rep/binary>>) -> handle(Tag, Rep);
 parse_string(S) -> S.
 
 decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
@@ -92,11 +89,7 @@ decode_array_hash(Cache, [], _AsMapKey) ->
 decode_array(Cache, Obj, AsMapKey) ->
   lists:mapfoldl(fun(El, C) -> decode(C, El, AsMapKey) end, Cache, Obj).
 
-decode_tag(Tag, Rep) ->
-  case transit_read_handlers:handler(Tag) of
-    F when is_function(F) -> F(Rep);
-    _ -> transit_types:tv(Tag, Rep)
-  end.
+decode_tag(Tag, Rep) -> handle(Tag, Rep).
 
 decode_hash(Cache, [{Key, Val}], AsMapKey) ->
   case decode(Cache, Key, AsMapKey) of
@@ -115,6 +108,36 @@ decode_hash(Cache, Name, _AsMapKey) ->
                       {DVal, C2} = decode(C1, Val, false),
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
+
+handle(?CMap, Rep) -> transit_utils:map_rep(list_to_proplist(Rep));
+handle(?Null, _) -> undefined;
+handle(?Boolean, "t") -> true;
+handle(?Boolean, "f") -> false;
+handle(?Int, Rep) -> binary_to_integer(Rep);
+handle(?BigInt, Rep) -> binary_to_integer(Rep);
+handle(?Float, Rep) -> binary_to_float(Rep);
+handle(?QUOTE, null) -> undefined;
+handle(?QUOTE, Rep) -> Rep;
+handle(?Set, Rep) -> sets:from_list(Rep);
+handle(?List, Rep) -> transit_types:list(Rep);
+handle(?Keyword, Rep) -> binary_to_atom(Rep, utf8);
+handle(?Symbol, Rep) -> transit_types:symbol(Rep);
+handle(?Date, Rep) when is_integer(Rep) ->
+	transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
+handle(?Date, Rep) ->
+	transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?VerboseDate, Rep) ->
+	transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
+handle(?UUID, [_, _] = U) ->
+	transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
+handle(?UUID, Rep) ->
+	transit_types:uuid(Rep);
+handle(Tag, Value) ->
+	#tagged_value { tag = Tag, rep = Value }.
+
+list_to_proplist([]) -> [];
+list_to_proplist([K,V|Tail]) -> [{K,V}|list_to_proplist(Tail)].
+
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
