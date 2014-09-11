@@ -61,7 +61,8 @@ add_cacheable(C, Name, AsMapKey) ->
 
 -spec is_cache_key(binary()) -> boolean().
 is_cache_key(<<"^ ", _/binary>>) -> false;
-is_cache_key(<<"^", _/binary>> = Name) when byte_size(Name) >= 2 -> true;
+is_cache_key(<<$^, _>>) -> true;
+is_cache_key(<<$^, _, _>>) -> true;
 is_cache_key(_) -> false.
 
 -spec encode_key(integer()) -> bitstring().
