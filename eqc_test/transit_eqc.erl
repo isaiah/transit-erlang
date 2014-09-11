@@ -15,12 +15,15 @@ advanced_atom() ->
 	  ['d 6y_>\b\007',':\007=&1CUH','o!,:T(\\U','bl\r\037n\0222w',
 	   '\031\b\vFt8/D','P-\005kaUVK','\002-F<\vS\0320',
 	   '\026,g\027!WOP','x\b\bPIi9F','\007{\002\037yKcB']),
-      ?LET(C, choose(0, 127), list_to_atom([C])),
 	  elements([phineas, ferb, candace, doofenschmirtz, isabella, perry, major_monogram])
 	]).
 
+atom1() ->
+	?LET(C, choose(0,255),
+	  list_to_atom([C])).
+
 atom() ->
-  ?SHRINK(oneof([simple_atom(), advanced_atom()]),
+  ?SHRINK(oneof([simple_atom(), atom1(), advanced_atom()]),
     [simple_atom()]).
 
 time_point() ->
