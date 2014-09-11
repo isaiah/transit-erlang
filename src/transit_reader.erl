@@ -73,7 +73,9 @@ decode_string(Cache, String, AsMapKey) ->
   {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
   {parse_string(OrigStr), Cache1}.
 
-parse_string(<<"~", Tag:1/binary, Rep/binary>>) when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES -> <<Tag/binary, Rep/binary>>;
+parse_string(<<"~", Tag:1/binary, _/binary>> = Bin) when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
+  <<_, Data/binary>> = Bin,
+  Data;
 parse_string(<<"~#", Rep/binary>>) -> {tag, Rep};
 parse_string(<<"~", Tag:1/binary, Rep/binary>>) -> handle(Tag, Rep);
 parse_string(S) -> S.
