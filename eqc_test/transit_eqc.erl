@@ -75,6 +75,10 @@ transit(N) ->
           ?LET(K, nat(),
             ?LET(L, transit_l(K+1, N, fun transit/1),
               t_shrink(sets:from_list(L)))))},
+        {N, ?LAZY(
+          ?LET(K, nat(),
+            ?LET(L, transit_l(K+1, N, fun transit/1),
+              t_shrink(transit_types:list(L)))))},
         {N, ?LAZY(?LET(K, nat(),
                     ?LETSHRINK([Ks, Vs], [transit_l(K+1, N div 2, fun transit/1),
                                           transit_l(K+1, N div 2, fun transit/1)],
@@ -124,13 +128,16 @@ term_type(I) when is_integer(I) -> [int];
 term_type(F) when is_float(F) -> [float];
 term_type(L) when is_list(L) ->
   Underlying = lists:flatten([term_type(K) || K <- L]),
-  lists:usort([list | Underlying]);
+  lists:usort([array | Underlying]);
 term_type(M) when is_map(M) ->
   Keys = lists:flatten([term_type(K) || K <- maps:keys(M)]),
   Values = lists:flatten([term_type(K) || K <- maps:values(M)]),
   lists:usort([map] ++ Keys ++ Values);
 term_type({tagged_value, <<"u">>, _}) -> [uuid];
 term_type({tagged_value, <<"$">>, _}) -> [symbol];
+term_type({tagged_value, <<"list">>, L}) ->
+  Underlying = lists:flatten([term_type(K) || K <- L]),
+  lists:usort([list | Underlying]);
 term_type({transit_datetime,_}) -> [time];
 term_type(Ty) ->
   case sets:is_set(Ty) of
