@@ -42,16 +42,26 @@ encoder time for each round. This then forms the base benchmark.
 
 | Commit | Test | Format | Timing ms |
 | ------ | ---- | ------ | --------- |
-| 3d3b04ee6aad | JSON | Read | 9.976 |
-| 3d3b04ee6aad | JSON | Write | 20.810 |
-| 3d3b04ee6aad | JSON | ISO | 31.987 |
-| 3d3b04ee6aad | MsgPack | Read | 4.901 |
-| 3d3b04ee6aad | MsgPack | Write | 12.072 |
-| 3d3b04ee6aad | MsgPack | ISO | 15.911 |
-| 3d3b04ee6aad | JSON_Verbose | Read | 9.724 |
-| 3d3b04ee6aad | JSON_Verbose | Write | 25.638 |
-| 3d3b04ee6aad | JSON_Verbose | ISO | 34.236 |
+| 3d3b04e | JSON | Read | 9.976 |
+| 3d3b04e | JSON | Write | 20.810 |
+| 3d3b04e | JSON | ISO | 31.987 |
+| 3d3b04e | MsgPack | Read | 4.901 |
+| 3d3b04e | MsgPack | Write | 12.072 |
+| 3d3b04e | MsgPack | ISO | 15.911 |
+| 3d3b04e | JSON_Verbose | Read | 9.724 |
+| 3d3b04e | JSON_Verbose | Write | 25.638 |
+| 3d3b04e | JSON_Verbose | ISO | 34.236 |
+| c976ce6 | JSON | Read | 8.883 |
+| c976ce6 | JSON | Write | 18.700 |
+| c976ce6 | JSON | ISO | 29.248 |
+| c976ce6 | MsgPack | Read | 3.258 |
+| c976ce6 | MsgPack | Write | 9.051 |
+| c976ce6 | MsgPack | ISO | 11.713 |
+| c976ce6 | JSON_Verbose | Read | 9.572 |
+| c976ce6 | JSON_Verbose | Write | 27.120 |
+| c976ce6 | JSON_Verbose | ISO | 36.613 |
 
+Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes in 0.930 ms. These are therefore the minimum timings and the rest is transit-specific overhead of decoding.
 
 Current limitations
 --------------------
