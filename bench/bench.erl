@@ -42,10 +42,13 @@ run_iso(N, Data, Opts) ->
 	run_iso(N-1, Data, Opts).
 
 p(Format) -> p(Format, ?DATA).
+
 p(Format, File) ->
 	{ok, Data} = file:read_file(File),
+	WData = transit:read(Data),
+	RData = transit:write(WData, [{format, Format}]),
 	eprof:profile(fun() ->
-		transit:read(Data, [{format, Format}])
+		transit:read(RData, [{format, Format}])
 	end),
 	eprof:log("out.prof.txt"),
 	eprof:analyze().
