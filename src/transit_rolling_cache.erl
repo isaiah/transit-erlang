@@ -77,9 +77,11 @@ encode_key(Num) ->
 is_cacheable(Str, true)  when byte_size(Str) >= ?MIN_SIZE_CACHEABLE -> true;
 is_cacheable(_Str, true) -> false;
 is_cacheable(Str, false) when byte_size(Str) >= ?MIN_SIZE_CACHEABLE ->
-    case binary:match(Str, [<<"~#">>, <<"~:">>, <<"~$">>]) of
-      nomatch -> false;
-      {_, _} -> true
+    case Str of
+        <<"~#", _/binary>> -> true;
+        <<"~:", _/binary>> -> true;
+        <<"~$", _/binary>> -> true;
+        _ -> false
     end;
 is_cacheable(_Str, false) -> false.
 
