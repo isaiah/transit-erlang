@@ -66,3 +66,8 @@ all_utf8(_) -> false.
 prop_utf8_string_correct() ->
     ?FORALL(S, utf8_string_bmp(),
       all_utf8(S)).
+
+uri() ->
+    oneof([<<"http://foo/bar">>,
+      <<"https://quux.zot/blemphf?query=albo#frags">>
+    ]).

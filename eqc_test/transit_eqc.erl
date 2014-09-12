@@ -57,6 +57,10 @@ transit_time() ->
 transit_uuid() ->
     ?SHRINK(?LET(UUID, eqc_lib:uuid(), transit_types:uuid(UUID)), [null()]).
 
+transit_uri() ->
+    ?LET(URI, eqc_lib:uri(),
+      transit_types:uri(URI)).
+
 transit(0) ->
     oneof([
         null(),
@@ -64,6 +68,7 @@ transit(0) ->
         integer(),
         transit_uuid(),
         transit_time(),
+        transit_uri(),
         symbol(),
         keyword()
     ]);
@@ -138,6 +143,7 @@ term_type(M) when is_map(M) ->
   lists:usort([map] ++ Keys ++ Values);
 term_type({tagged_value, <<"u">>, _}) -> [uuid];
 term_type({tagged_value, <<"$">>, _}) -> [symbol];
+term_type({tagged_value, <<"r">>, _}) -> [uri];
 term_type({tagged_value, <<"list">>, L}) ->
   Underlying = lists:flatten([term_type(K) || K <- L]),
   lists:usort([list | Underlying]);
