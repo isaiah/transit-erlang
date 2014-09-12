@@ -37,7 +37,9 @@ format(#{}) -> undefined;
 format(Config) when is_list(Config) ->
     proplists:get_value(format, Config, undefined).
 
-decode(Cache, Str, AsMapKey) when is_binary(Str) -> decode_string(Cache, Str, AsMapKey);
+decode(Cache, Str, AsMapKey) when is_binary(Str) ->
+  {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, Str, AsMapKey),
+  {parse_string(OrigStr), Cache1};
 decode(Cache, [?MAP_AS_ARR|Tail], AsMapKey) ->
   {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
   {transit_utils:map_rep(L), C};
@@ -69,15 +71,13 @@ decode(Cache, Obj, AsMapKey) when is_list(Obj) -> decode_array(Cache, Obj, AsMap
 decode(Cache, null, _AsMapKey) -> {undefined, Cache};
 decode(Cache, Obj, _AsMapKey) -> {Obj, Cache}.
 
-decode_string(Cache, String, AsMapKey) ->
-  {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, String, AsMapKey),
-  {parse_string(OrigStr), Cache1}.
+rem_fst(<<_, Data/binary>>) -> Data.
 
-parse_string(<<"~", Tag:1/binary, _/binary>> = Bin) when Tag =:= ?ESC; Tag =:= ?SUB; Tag =:= ?RES ->
-  <<_, Data/binary>> = Bin,
-  Data;
-parse_string(<<"~#", Rep/binary>>) -> {tag, Rep};
-parse_string(<<"~", Tag:1/binary, Rep/binary>>) -> handle(Tag, Rep);
+parse_string(<< $~, $~, _/binary>> = Bin) -> rem_fst(Bin);
+parse_string(<< $~, $^, _/binary>> = Bin) -> rem_fst(Bin);
+parse_string(<< $~, $`, _/binary>> = Bin) -> rem_fst(Bin);
+parse_string(<< $~, $#, Rep/binary>>) -> {tag, Rep};
+parse_string(<< $~, X:1/binary, Rep/binary>>) -> handle(X, Rep);
 parse_string(S) -> S.
 
 decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
