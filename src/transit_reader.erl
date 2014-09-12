@@ -59,7 +59,7 @@ decode(Cache, [{_, _}|_] = Obj, AsMapKey) ->
 decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
   {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
   case OrigTag of
-    <<"~", "#", Tag/binary>> ->
+    <<"~#", Tag/binary>> ->
       {DRep, C1} = decode(C, Rep, AsMapKey),
       {decode_tag(Tag, DRep), C1};
     _ ->
@@ -124,18 +124,12 @@ handle(?Set, Rep) -> sets:from_list(Rep);
 handle(?List, Rep) -> transit_types:list(Rep);
 handle(?Keyword, Rep) -> binary_to_atom(Rep, utf8);
 handle(?Symbol, Rep) -> transit_types:symbol(Rep);
-handle(?Date, Rep) when is_integer(Rep) ->
-	transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
-handle(?Date, Rep) ->
-	transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
-handle(?VerboseDate, Rep) ->
-	transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
-handle(?UUID, [_, _] = U) ->
-	transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
-handle(?UUID, Rep) ->
-	transit_types:uuid(Rep);
-handle(Tag, Value) ->
-	#tagged_value { tag = Tag, rep = Value }.
+handle(?Date, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
+handle(?Date, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?VerboseDate, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
+handle(?UUID, [_, _] = U) -> transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
+handle(?UUID, Rep) -> transit_types:uuid(Rep);
+handle(Tag, Value) -> #tagged_value { tag = Tag, rep = Value }.
 
 list_to_proplist([]) -> [];
 list_to_proplist([K,V|Tail]) -> [{K,V}|list_to_proplist(Tail)].

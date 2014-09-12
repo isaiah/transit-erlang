@@ -5,6 +5,8 @@
 -export([encode/3, decode/3]).
 -include_lib("transit_format.hrl").
 
+-compile([{inline, [is_cache_key/1, is_cacheable/2]}]).
+
 -define(CACHE_CODE_DIGITS, 44).
 -define(CACHE_SIZE, ?CACHE_CODE_DIGITS * ?CACHE_CODE_DIGITS).
 -define(FIRST_ORD, 48).
