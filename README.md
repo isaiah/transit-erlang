@@ -67,6 +67,7 @@ Current limitations
 --------------------
 
 * We can't generate a keyword 'true' due to the current mapping of atoms into keywords.
+* Points-in-time before the date 1/1 1970 are not encoded and decoded correctly.
 
 Default type mapping
 --------------------
