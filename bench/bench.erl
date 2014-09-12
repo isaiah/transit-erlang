@@ -49,10 +49,15 @@ p(Format, File) ->
 	WData = transit:read(Data),
 	RData = transit:write(WData, [{format, Format}]),
 	eprof:profile(fun() ->
-		transit:read(RData, [{format, Format}])
+	         run_p(?ROUNDS, RData, Format)
 	end),
 	eprof:log("out.prof.txt"),
 	eprof:analyze().
+
+run_p(0, _, _) -> ok;
+run_p(N, Data, Format) ->
+	transit:read(Data, [{format, Format}]),
+	run_p(N-1, Data, Format).
 
 jsx() ->
 	{ok, Data} = file:read_file(?DATA),
