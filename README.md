@@ -71,6 +71,11 @@ Current limitations
 Default type mapping
 --------------------
 
+We currently handle the types in the given table with the given mappings. Of notable omissions:
+
+* Link types
+* Byte sequences
+
 | Transit type | Write accepts             | Read returns              |
 | ------------ | -------------             | ------------              |
 | null         | undefined                 | undefined                 |
