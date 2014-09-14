@@ -113,6 +113,12 @@ handler(Data) when is_atom(Data) ->
   end;
 handler(Data) when is_record(Data, transit_datetime) ->
   #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
+handler(#tagged_value { tag = ?Binary }) ->
+  #write_handler {
+  	tag = fun (#tagged_value { tag = Tag }) -> Tag end,
+  	rep = fun (#tagged_value { rep = Data }) -> Data end,
+  	string_rep = fun (#tagged_value { rep = Data }) -> base64:encode(Data) end
+  };
 handler(_TaggedVal=#tagged_value{}) ->
   #write_handler{tag=fun(_T=#tagged_value{tag=Tag}) -> Tag end,
                         %(Tag) -> Tag end,

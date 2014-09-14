@@ -61,6 +61,10 @@ transit_uri() ->
     ?LET(URI, eqc_lib:uri(),
       transit_types:uri(URI)).
 
+transit_binary() ->
+	?LET(Bin, binary(),
+		transit_types:binary(Bin)).
+
 transit(0) ->
     oneof([
         null(),
@@ -70,7 +74,8 @@ transit(0) ->
         transit_time(),
         transit_uri(),
         symbol(),
-        keyword()
+        keyword(),
+        transit_binary()
     ]);
 transit(N) ->
     frequency([
@@ -144,6 +149,7 @@ term_type(M) when is_map(M) ->
 term_type({tagged_value, <<"u">>, _}) -> [uuid];
 term_type({tagged_value, <<"$">>, _}) -> [symbol];
 term_type({tagged_value, <<"r">>, _}) -> [uri];
+term_type({tagged_value, <<"b">>, _}) -> [binary];
 term_type({tagged_value, <<"list">>, L}) ->
   Underlying = lists:flatten([term_type(K) || K <- L]),
   lists:usort([list | Underlying]);

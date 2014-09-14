@@ -75,7 +75,7 @@ Default type mapping
 We currently handle the types in the given table with the given mappings. Of notable omissions:
 
 * Link types
-* Byte sequences
+* Special numbers in floating point: nan, infinity, neg_infinity
 
 | Transit type | Write accepts             | Read returns              |
 | ------------ | -------------             | ------------              |
@@ -85,13 +85,14 @@ We currently handle the types in the given table with the given mappings. Of not
 | integer      | integer()                 | integer()                 |
 | decimal      | float()                   | float()                   |
 | keyword      | atom()                    | atom()                    |
-| symbol       | transit\_types:symbol()   | transit\_types:symbol()   |
+| symbol       | transit\_types:symbol/1   | transit\_types:symbol()   |
 | big decimal  | float()                   | float()                   |
 | big integer  | integer()                 | integer()                 |
-| time         | transit\_types:datetime() | transit\_types:datetime() |
+| time         | transit\_types:datetime/1 | transit\_types:datetime() |
 | uri          | transit\_types.URI        | transit\_types.URI        |
 | uuid         | uuid.UUID                 | uuid.UUID                 |
+| bytes		   | transit\_types:binary/1   | transit_types:binary/1    |
 | array        | list                      | list                      |
-| list         | transit\_types:list()     | transit\_types:list()     |
+| list         | transit\_types:list/1     | transit\_types:list()     |
 | set          | sets, gb\_sets, ordsets   | sets                      |
 | map          | map                       | map                       |

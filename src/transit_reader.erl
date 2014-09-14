@@ -126,6 +126,9 @@ handle(?Keyword, Rep) -> binary_to_atom(Rep, utf8);
 handle(?Symbol, Rep) -> transit_types:symbol(Rep);
 handle(?Date, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
 handle(?Date, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?Binary, Rep) ->
+	Data = base64:decode(Rep),
+	transit_types:binary(Data);
 handle(?VerboseDate, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
 handle(?UUID, [_, _] = U) -> transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
 handle(?UUID, Rep) -> transit_types:uuid(Rep);
