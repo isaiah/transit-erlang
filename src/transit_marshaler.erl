@@ -130,7 +130,6 @@ emit_ground(Mod, Rep, S, ?Int) -> Mod:emit_int(Rep, S);
 emit_ground(Mod, Rep, S, ?Float) -> Mod:emit_float(Rep, S);
 emit_ground(Mod, Rep, S, ?Array) -> Mod:emit_array(Rep, S);
 emit_ground(Mod, Rep, S, ?String) when is_binary(Rep) -> Mod:emit_string(<<>>, Rep, S);
-emit_ground(Mod, Rep, S, ?String) -> Mod:emit_string(<<>>, list_to_binary(Rep), S);
 emit_ground(Mod, Rep, S, ?Map) ->
   case stringable_keys(Rep) of
     true -> Mod:emit_map(Rep, S);
