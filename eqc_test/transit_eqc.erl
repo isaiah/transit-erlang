@@ -71,7 +71,7 @@ special_number() ->
 transit(0) ->
     oneof([
         null(),
-        %% bool(),
+        bool(),
         special_number(),
         eqc_lib:utf8_string(),
         integer(),

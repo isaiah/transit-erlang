@@ -122,7 +122,7 @@ handle(?QUOTE, null) -> undefined;
 handle(?QUOTE, Rep) -> Rep;
 handle(?Set, Rep) -> sets:from_list(Rep);
 handle(?List, Rep) -> transit_types:list(Rep);
-handle(?Keyword, Rep) -> binary_to_atom(Rep, utf8);
+handle(?Keyword, Rep) -> binary_to_existing_atom(Rep, utf8);
 handle(?Symbol, Rep) -> transit_types:symbol(Rep);
 handle(?Date, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
 handle(?Date, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
