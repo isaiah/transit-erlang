@@ -65,9 +65,14 @@ transit_binary() ->
 	?LET(Bin, binary(),
 		transit_types:binary(Bin)).
 
+special_number() ->
+	elements([nan, infinity, neg_infinity]).
+
 transit(0) ->
     oneof([
         null(),
+        %% bool(),
+        special_number(),
         eqc_lib:utf8_string(),
         integer(),
         transit_uuid(),
@@ -135,6 +140,9 @@ term_size(X) ->
 term_type(null) -> [null];
 term_type(true) -> [bool];
 term_type(false) -> [bool];
+term_type(nan) -> [special_number];
+term_type(infinity) -> [special_number];
+term_type(neg_infinity) -> [special_number];
 term_type(B) when is_binary(B) -> [string];
 term_type(A) when is_atom(A) -> [keyword];
 term_type(I) when is_integer(I) -> [int];

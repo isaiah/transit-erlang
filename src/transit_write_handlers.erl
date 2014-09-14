@@ -73,6 +73,8 @@ map_rep(M) ->
 map_string_rep(_M) ->
   undefined.
 
+const(K) -> fun (_) -> K end.
+
 %%% Keyword handler
 keyword_tag(_K) ->
   ?Keyword.
@@ -87,6 +89,16 @@ datetime_rep(_T=#transit_datetime{timestamp=Timestamp}) ->
   transit_utils:timestamp_to_ms(Timestamp).
 datetime_string_rep(D=#transit_datetime{}) ->
   integer_to_binary(datetime_rep(D)).
+
+special_number() ->
+    F = fun (nan) -> <<"NaN">>;
+            (infinity) -> <<"INF">>;
+            (neg_infinity) -> <<"-INF">>
+        end,
+    #write_handler { tag = const(?SPECIAL_NUMBER),
+                     rep = F,
+                     string_rep = F
+                   }.
 
 handler([]) ->
   #write_handler{tag = fun array_tag/1, rep = fun array_rep/1, string_rep = fun array_string_rep/1};
@@ -108,6 +120,9 @@ handler(Data) when is_atom(Data) ->
   case Data of
     undefined ->
       #write_handler{tag = fun undefined_tag/1, rep = fun undefined_rep/1, string_rep = fun undefined_string_rep/1};
+    nan -> special_number();
+    infinity -> special_number();
+    neg_infinity -> special_number();
     _ ->
       #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
   end;

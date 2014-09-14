@@ -66,7 +66,8 @@ Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes 
 Current limitations
 --------------------
 
-* We can't generate a keyword 'true' due to the current mapping of atoms into keywords.
+* We can't generate a keyword 'true' or false due to the current mapping of atoms into keywords.
+* We can't generate a keyword 'nan', 'infinity' or 'neg_infinity' due to special number mappings
 * Points-in-time before the date 1/1 1970 are not encoded and decoded correctly.
 
 Default type mapping
@@ -75,7 +76,6 @@ Default type mapping
 We currently handle the types in the given table with the given mappings. Of notable omissions:
 
 * Link types
-* Special numbers in floating point: nan, infinity, neg_infinity
 
 | Transit type | Write accepts             | Read returns              |
 | ------------ | -------------             | ------------              |
@@ -92,6 +92,7 @@ We currently handle the types in the given table with the given mappings. Of not
 | uri          | transit\_types.URI        | transit\_types.URI        |
 | uuid         | uuid.UUID                 | uuid.UUID                 |
 | bytes		   | transit\_types:binary/1   | transit_types:binary/1    |
+| special number | nan, infinity, neg_infinity | nan, infinity, neg_infinity |
 | array        | list                      | list                      |
 | list         | transit\_types:list/1     | transit\_types:list()     |
 | set          | sets, gb\_sets, ordsets   | sets                      |

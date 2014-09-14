@@ -126,6 +126,9 @@ handle(?Keyword, Rep) -> binary_to_atom(Rep, utf8);
 handle(?Symbol, Rep) -> transit_types:symbol(Rep);
 handle(?Date, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
 handle(?Date, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?SPECIAL_NUMBER, <<"NaN">>) -> nan;
+handle(?SPECIAL_NUMBER, <<"INF">>) -> infinity;
+handle(?SPECIAL_NUMBER, <<"-INF">>) -> neg_infinity;
 handle(?Binary, Rep) ->
 	Data = base64:decode(Rep),
 	transit_types:binary(Data);

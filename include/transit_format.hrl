@@ -11,25 +11,27 @@
 -define(QUOTE, <<"'">>).
 -define(MAP_AS_ARR, <<"^ ">>).
 
--define(Null, <<"_">>).
--define(Int, <<"i">>).
--define(BigInt, <<"n">>).
--define(Float, <<"d">>).
--define(String, <<"s">>).
--define(Boolean, <<"?">>).
--define(Keyword, <<":">>).
--define(Date, <<"m">>).
--define(VerboseDate, <<"t">>).
--define(UUID, <<"u">>).
--define(URI, <<"r">>).
--define(Binary, <<"b">>).
--define(Symbol, <<"$">>).
 -define(Array, <<"array">>).
+-define(BigInt, <<"n">>).
+-define(Binary, <<"b">>).
+-define(Boolean, <<"?">>).
+-define(CMap, <<"cmap">>).
+-define(Date, <<"m">>).
+-define(Float, <<"d">>).
+-define(Int, <<"i">>).
+-define(Keyword, <<":">>).
 -define(Link, <<"link">>).
 -define(List, <<"list">>).
 -define(Map, <<"map">>).
--define(CMap, <<"cmap">>).
+-define(Null, <<"_">>).
 -define(Set, <<"set">>).
+-define(SPECIAL_NUMBER, <<"z">>).
+-define(String, <<"s">>).
+-define(Symbol, <<"$">>).
+-define(URI, <<"r">>).
+-define(UUID, <<"u">>).
+-define(VerboseDate, <<"t">>).
+
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 
