@@ -1,7 +1,7 @@
 -module(bench).
 
 -export([run/1, run/2]).
--export([p/1]).
+-export([p/1, pw/1]).
 -export([jsx/0, msgpack/0]).
 
 -define(ROUNDS, 300).
@@ -53,6 +53,22 @@ p(Format, File) ->
 	end),
 	eprof:log("out.prof.txt"),
 	eprof:analyze().
+
+pw(Format) -> pw(Format, ?DATA).
+
+pw(Format, File) ->
+	{ok, Data} = file:read_file(File),
+	WData = transit:read(Data),
+	eprof:profile(fun() ->
+		run_pw(?ROUNDS, WData, Format)
+	end),
+	eprof:log("out.prof.txt"),
+	eprof:analyze().
+	
+run_pw(0, _, _) -> ok;
+run_pw(N, Data, Format) ->
+	transit:write(Data, [{format, Format}]),
+	run_pw(N-1, Data, Format).
 
 run_p(0, _, _) -> ok;
 run_p(N, Data, Format) ->
