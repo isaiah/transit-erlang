@@ -113,8 +113,8 @@ decode_hash(Cache, Name, _AsMapKey) ->
 
 handle(?CMap, Rep) -> transit_utils:map_rep(list_to_proplist(Rep));
 handle(?Null, _) -> undefined;
-handle(?Boolean, "t") -> true;
-handle(?Boolean, "f") -> false;
+handle(?Boolean, <<"t">>) -> true;
+handle(?Boolean, <<"f">>) -> false;
 handle(?Int, Rep) -> binary_to_integer(Rep);
 handle(?BigInt, Rep) -> binary_to_integer(Rep);
 handle(?Float, Rep) -> binary_to_float(Rep);
