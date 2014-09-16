@@ -17,28 +17,28 @@ uri(URI) ->
   tv(?URI, URI).
 
 link(Link) ->
-  tv(?Link, Link).
+  tv(?LINK, Link).
 
 uuid(ID) ->
   tv(?UUID, ID).
 
 binary(B) ->
-  tv(?Binary, B).
+  tv(?BINARY, B).
 
 symbol(S) when is_bitstring(S) ->
-  tv(?Symbol, S);
+  tv(?SYMBOL, S);
 symbol(S) when is_list(S) ->
-  tv(?Symbol, list_to_binary(S));
+  tv(?SYMBOL, list_to_binary(S));
 symbol(S) when is_atom(S) ->
-  tv(?Symbol, atom_to_binary(S, utf8)).
+  tv(?SYMBOL, atom_to_binary(S, utf8)).
 
 bigint(I) ->
-  tv(?BigInt, integer_to_binary(I)).
+  tv(?BIGINT, integer_to_binary(I)).
 
 list(A) when is_tuple(A) ->
-  tv(?List, tuple_to_list(A));
+  tv(?LIST, tuple_to_list(A));
 list(A) ->
-  tv(?List, A).
+  tv(?LIST, A).
 
 tv(Tag, Value) ->
   #tagged_value{tag=Tag, rep=Value}.

@@ -1,9 +1,3 @@
-%%% ESC = "~"
-%%% SUB = "^"
-%%% RES = "`"
-%%% TAG = "~#"
-%%% QUOTE = "'"
-%%% MAP_AS_ARR = "^ "
 -define(ESC, <<"~">>).
 -define(SUB, <<"^">>).
 -define(RES, <<"`">>).
@@ -11,27 +5,26 @@
 -define(QUOTE, <<"'">>).
 -define(MAP_AS_ARR, <<"^ ">>).
 
--define(Array, <<"array">>).
--define(BigInt, <<"n">>).
--define(Binary, <<"b">>).
--define(Boolean, <<"?">>).
--define(CMap, <<"cmap">>).
--define(Date, <<"m">>).
--define(Float, <<"d">>).
--define(Int, <<"i">>).
--define(Keyword, <<":">>).
--define(Link, <<"link">>).
--define(List, <<"list">>).
--define(Map, <<"map">>).
--define(Null, <<"_">>).
--define(Set, <<"set">>).
+-define(ARRAY, <<"array">>).
+-define(BIGINT, <<"n">>).
+-define(BINARY, <<"b">>).
+-define(BOOLEAN, <<"?">>).
+-define(CMAP, <<"cmap">>).
+-define(DATE, <<"m">>).
+-define(FLOAT, <<"d">>).
+-define(INT, <<"i">>).
+-define(KEYWORD, <<":">>).
+-define(LINK, <<"link">>).
+-define(LIST, <<"list">>).
+-define(MAP, <<"map">>).
+-define(NULL, <<"_">>).
+-define(SET, <<"set">>).
 -define(SPECIAL_NUMBER, <<"z">>).
--define(String, <<"s">>).
--define(Symbol, <<"$">>).
+-define(STRING, <<"s">>).
+-define(SYMBOL, <<"$">>).
 -define(URI, <<"r">>).
 -define(UUID, <<"u">>).
--define(VerboseDate, <<"t">>).
-
+-define(VERBOSEDATE, <<"t">>).
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 
@@ -39,8 +32,7 @@
                         rep :: fun((any()) -> string()),
                         string_rep :: fun((any()) -> bitstring())}).
 
--record(tagged_value, {tag :: bitstring(),
-                       rep :: any()}).
+-record(tagged_value, {tag :: bitstring(), rep :: any()}).
 
 -type tagged_value() :: #tagged_value{}.
 

@@ -103,8 +103,8 @@ marshal_top_output(Mod, Object, Env, Tag) when byte_size(Tag) == 1 ->
 marshal_top_output(Mod, Object, Env, _) ->
   marshal(Mod, Object, Env).
 
--spec marshal(module(), any(), S) -> {bitstring(), S} when S :: env().
-
+-spec marshal(module(), any(), S) -> {bitstring(), S}
+    when S :: env().
 marshal(Mod, Obj, #env { as_map_key = AsMapKey } = S) ->
   #write_handler { tag = TagFun,
                    string_rep = StringRep,
@@ -124,13 +124,13 @@ marshal(Mod, Obj, #env { as_map_key = AsMapKey } = S) ->
     V -> V
   end.
   
-emit_ground(Mod, Rep, S, ?Null) -> Mod:emit_null(Rep, S);
-emit_ground(Mod, Rep, S, ?Boolean) -> Mod:emit_boolean(Rep, S);
-emit_ground(Mod, Rep, S, ?Int) -> Mod:emit_int(Rep, S);
-emit_ground(Mod, Rep, S, ?Float) -> Mod:emit_float(Rep, S);
-emit_ground(Mod, Rep, S, ?Array) -> Mod:emit_array(Rep, S);
-emit_ground(Mod, Rep, S, ?String) when is_binary(Rep) -> Mod:emit_string(<<>>, Rep, S);
-emit_ground(Mod, Rep, S, ?Map) ->
+emit_ground(Mod, Rep, S, ?NULL) -> Mod:emit_null(Rep, S);
+emit_ground(Mod, Rep, S, ?BOOLEAN) -> Mod:emit_boolean(Rep, S);
+emit_ground(Mod, Rep, S, ?INT) -> Mod:emit_int(Rep, S);
+emit_ground(Mod, Rep, S, ?FLOAT) -> Mod:emit_float(Rep, S);
+emit_ground(Mod, Rep, S, ?ARRAY) -> Mod:emit_array(Rep, S);
+emit_ground(Mod, Rep, S, ?STRING) when is_binary(Rep) -> Mod:emit_string(<<>>, Rep, S);
+emit_ground(Mod, Rep, S, ?MAP) ->
   case stringable_keys(Rep) of
     true -> Mod:emit_map(Rep, S);
     false -> Mod:emit_cmap(Rep, S)

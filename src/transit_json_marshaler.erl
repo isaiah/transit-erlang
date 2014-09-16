@@ -13,7 +13,7 @@
 emit_null(_Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
-      emit_string(<<?ESC/bitstring, ?Null/bitstring>>, <<"null">>, Env);
+      emit_string(<<?ESC/bitstring, ?NULL/bitstring>>, <<"null">>, Env);
     false ->
       emit_object(undefined, Env)
   end.
@@ -21,17 +21,17 @@ emit_null(_Rep, Env) ->
 emit_boolean(Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
-      emit_string(<<?ESC/bitstring, ?Boolean/bitstring>>, Rep, Env);
+      emit_string(<<?ESC/bitstring, ?BOOLEAN/bitstring>>, Rep, Env);
     false ->
       emit_object(Rep, Env)
   end.
 
 emit_int(Rep, Env) when is_integer(Rep), Rep =< ?MIN_INT; is_integer(Rep), Rep >= ?MAX_INT ->
-  emit_string(<<?ESC/bitstring, ?Int/bitstring>>, integer_to_binary(Rep), Env);
+  emit_string(<<?ESC/bitstring, ?INT/bitstring>>, integer_to_binary(Rep), Env);
 emit_int(Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
-      emit_string(<<?ESC/bitstring, ?Int/bitstring>>, Rep, Env);
+      emit_string(<<?ESC/bitstring, ?INT/bitstring>>, Rep, Env);
     false ->
       emit_object(Rep, Env)
   end.
@@ -39,13 +39,15 @@ emit_int(Rep, Env) ->
 emit_float(Rep, Env) ->
   case transit_marshaler:as_map_key(Env) of
     true ->
-      emit_string(<<?ESC/bitstring, ?Float/bitstring>>, Rep, Env);
+      emit_string(<<?ESC/bitstring, ?FLOAT/bitstring>>, Rep, Env);
     false ->
       emit_object(Rep, Env)
   end.
 
--spec emit_tagged(Rep, Env) ->
-  {Resp, Env} when Rep::tagged_value(), Resp::bitstring(), Env::transit_marshaler:env().
+-spec emit_tagged(Rep, Env) -> {Resp, Env}
+  when Rep :: tagged_value(),
+       Resp :: [binary()],
+       Env :: transit_marshaler:env().
 
 emit_tagged(#tagged_value{tag=Tag, rep=Rep}, S0) ->
   Cache = transit_marshaler:cache(S0),
@@ -103,7 +105,7 @@ emit_map(M, S) ->
   {lists:reverse(Body), S2}.
 
 emit_cmap(M, S) ->
-  emit_tagged(#tagged_value{tag=?CMap, rep=transit_marshaler:flatten_map(M)}, S).
+  emit_tagged(#tagged_value{tag=?CMAP, rep=transit_marshaler:flatten_map(M)}, S).
 
 emit_array(A, S) ->
   {Body, S2} = lists:foldl(fun (E, {In, NS1}) ->

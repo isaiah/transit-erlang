@@ -75,7 +75,7 @@ emit_null(Rep, Env) ->
   transit_json_marshaler:emit_null(Rep, Env).
 
 handler(Obj) when is_record(Obj, transit_datetime) ->
-  #write_handler{tag=fun(_) -> ?VerboseDate end,
+  #write_handler{tag=fun(_) -> ?VERBOSEDATE end,
                  rep=fun(_D=#transit_datetime{timestamp=D}) ->
                          transit_utils:iso_8601_fmt(D) end,
                  string_rep=fun(_D=#transit_datetime{timestamp=D}) ->

@@ -30,7 +30,7 @@ empty(_Format) -> #cache { kv = dict:new(), vk = dict:new() }.
 nocache() ->
   nocache.
 
--spec encode(Cache, Name, boolean()) -> Name
+-spec encode(Cache, Name, boolean()) -> {Name, Cache}
   when Cache::cache(), Name::bitstring().
 % XXX(isaiah) A very interesting bug of the compiler, this is emitted
 % and encode_with_cache doesn't know how to handle "nocache".

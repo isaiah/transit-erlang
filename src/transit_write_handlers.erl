@@ -9,7 +9,7 @@
 
 %%% undefined handler
 undefined_tag(_) ->
-  ?Null.
+  ?NULL.
 
 undefined_rep(_) ->
   undefined.
@@ -19,7 +19,7 @@ undefined_string_rep(_) ->
 
 %%% Integer handler
 integer_tag(_I) ->
-  ?Int.
+  ?INT.
 
 integer_rep(I) ->
   I.
@@ -29,7 +29,7 @@ integer_string_rep(I) ->
 
 %%% Float handler
 float_tag(_) ->
-  ?Float.
+  ?FLOAT.
 float_rep(F) ->
   F.
 float_string_rep(F) ->
@@ -37,7 +37,7 @@ float_string_rep(F) ->
 
 %%% binary handler
 binary_tag(_) ->
-  ?String.
+  ?STRING.
 binary_rep(S) ->
   S.
 binary_string_rep(S) ->
@@ -46,7 +46,7 @@ binary_string_rep(S) ->
 
 %%% Boolean handler
 boolean_tag(_) ->
-  ?Boolean.
+  ?BOOLEAN.
 boolean_rep(B) ->
   B.
 boolean_string_rep(B) ->
@@ -59,7 +59,7 @@ boolean_string_rep(B) ->
 
 %%% Array (which is list in erlang) handler
 array_tag(_A) ->
-  ?Array.
+  ?ARRAY.
 array_rep(A) ->
   A.
 array_string_rep(_A) ->
@@ -67,7 +67,7 @@ array_string_rep(_A) ->
 
 %%% Map handler
 map_tag(_M) ->
-  ?Map.
+  ?MAP.
 map_rep(M) ->
   M.
 map_string_rep(_M) ->
@@ -77,14 +77,14 @@ const(K) -> fun (_) -> K end.
 
 %%% Keyword handler
 keyword_tag(_K) ->
-  ?Keyword.
+  ?KEYWORD.
 keyword_rep(K) ->
   K.
 keyword_string_rep(K) -> atom_to_binary(K, utf8).
 
 %%% date handler
 datetime_tag(_D) ->
-  ?Date.
+  ?DATE.
 datetime_rep(_T=#transit_datetime{timestamp=Timestamp}) ->
   transit_utils:timestamp_to_ms(Timestamp).
 datetime_string_rep(D=#transit_datetime{}) ->
@@ -128,7 +128,7 @@ handler(Data) when is_atom(Data) ->
   end;
 handler(Data) when is_record(Data, transit_datetime) ->
   #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
-handler(#tagged_value { tag = ?Binary }) ->
+handler(#tagged_value { tag = ?BINARY }) ->
   #write_handler {
   	tag = fun (#tagged_value { tag = Tag }) -> Tag end,
   	rep = fun (#tagged_value { rep = Data }) -> Data end,
@@ -146,8 +146,8 @@ handler(Data) ->
     undefined ->
       undefined;
     Set ->
-      #write_handler{tag=fun(_) -> ?Set end,
-                     rep=fun(Rep) -> #tagged_value{tag=?Array, rep=Set:to_list(Rep)} end,
+      #write_handler{tag=fun(_) -> ?SET end,
+                     rep=fun(Rep) -> #tagged_value{tag=?ARRAY, rep=Set:to_list(Rep)} end,
                      string_rep=fun(_) -> undefined end}
   end.
 
@@ -163,10 +163,10 @@ tag(Data) ->
 -include_lib("eunit/include/eunit.hrl").
 
 handler_test_() ->
-  Tests = [{?Int, 1234},
-           {?Map, #{}},
-           {?Keyword, hi},
-           {?Null, undefined}
+  Tests = [{?INT, 1234},
+           {?MAP, #{}},
+           {?KEYWORD, hi},
+           {?NULL, undefined}
           ],
   [fun() ->
       IntH = handler(Int),

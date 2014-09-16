@@ -111,28 +111,28 @@ decode_hash(Cache, Name, _AsMapKey) ->
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
 
-handle(?CMap, Rep) -> transit_utils:map_rep(list_to_proplist(Rep));
-handle(?Null, _) -> undefined;
-handle(?Boolean, <<"t">>) -> true;
-handle(?Boolean, <<"f">>) -> false;
-handle(?Int, Rep) -> binary_to_integer(Rep);
-handle(?BigInt, Rep) -> binary_to_integer(Rep);
-handle(?Float, Rep) -> binary_to_float(Rep);
+handle(?CMAP, Rep) -> transit_utils:map_rep(list_to_proplist(Rep));
+handle(?NULL, _) -> undefined;
+handle(?BOOLEAN, <<"t">>) -> true;
+handle(?BOOLEAN, <<"f">>) -> false;
+handle(?INT, Rep) -> binary_to_integer(Rep);
+handle(?BIGINT, Rep) -> binary_to_integer(Rep);
+handle(?FLOAT, Rep) -> binary_to_float(Rep);
 handle(?QUOTE, null) -> undefined;
 handle(?QUOTE, Rep) -> Rep;
-handle(?Set, Rep) -> sets:from_list(Rep);
-handle(?List, Rep) -> transit_types:list(Rep);
-handle(?Keyword, Rep) -> binary_to_existing_atom(Rep, utf8);
-handle(?Symbol, Rep) -> transit_types:symbol(Rep);
-handle(?Date, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
-handle(?Date, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?SET, Rep) -> sets:from_list(Rep);
+handle(?LIST, Rep) -> transit_types:list(Rep);
+handle(?KEYWORD, Rep) -> binary_to_existing_atom(Rep, utf8);
+handle(?SYMBOL, Rep) -> transit_types:symbol(Rep);
+handle(?DATE, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
+handle(?DATE, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
 handle(?SPECIAL_NUMBER, <<"NaN">>) -> nan;
 handle(?SPECIAL_NUMBER, <<"INF">>) -> infinity;
 handle(?SPECIAL_NUMBER, <<"-INF">>) -> neg_infinity;
-handle(?Binary, Rep) ->
+handle(?BINARY, Rep) ->
 	Data = base64:decode(Rep),
 	transit_types:binary(Data);
-handle(?VerboseDate, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
+handle(?VERBOSEDATE, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
 handle(?UUID, [_, _] = U) -> transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
 handle(?UUID, Rep) -> transit_types:uuid(Rep);
 handle(Tag, Value) -> #tagged_value { tag = Tag, rep = Value }.
