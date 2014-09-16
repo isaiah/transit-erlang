@@ -74,27 +74,26 @@ emit_encoded(Tag, Rep, Env) ->
 emit_null(Rep, Env) ->
   transit_json_marshaler:emit_null(Rep, Env).
 
-handler(Obj) when is_record(Obj, transit_datetime) ->
-  #write_handler{tag=fun(_) -> ?VERBOSEDATE end,
-                 rep=fun(_D=#transit_datetime{timestamp=D}) ->
-                         transit_utils:iso_8601_fmt(D) end,
-                 string_rep=fun(_D=#transit_datetime{timestamp=D}) ->
-                         transit_utils:iso_8601_fmt(D) end
-                };
+handler({timepoint, _}) ->
+  #write_handler {
+	tag = fun(_) -> ?VERBOSEDATE end,
+	rep = fun({timepoint, TP}) -> transit_utils:iso_8601_fmt(TP) end,
+	string_rep = fun({timepoint, TP}) -> transit_utils:iso_8601_fmt(TP) end
+  };
 handler(_) -> undefined.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-start_server() ->
+new_env() ->
   transit_marshaler:new_env().
 
-stop_server(_Env) ->
+stop(_Env) ->
   ok.
 
 marshals_extention_test_() ->
   {foreach,
-   fun start_server/0,
-   fun stop_server/1,
+   fun new_env/0,
+   fun stop/1,
    [fun marshals_tagged/1,
     fun marshals_extend/1
    ]}.
@@ -110,9 +109,9 @@ marshals_tagged(Env) ->
 marshals_extend(_Env) ->
   Tests = [{<<"{}">>, [{}]},
            {<<"{}">>, #{}},
-           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, a]},
+           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, {kw, <<"a">>}]},
            {<<"{\"a\":\"b\",\"~i3\":4}">>, #{3 => 4, <<"a">> => <<"b">>}},
-           {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, transit_types:datetime({0,0,0})},
+           {<<"{\"~#'\":\"~t1970-01-01T00:00:00.000Z\"}">>, {timepoint, {0,0,0}}},
            {<<"{\"~d3.5\":4.1}">>, #{3.5 => 4.1}}],
   [fun() -> Res = jsx:encode(transit_marshaler:marshal_top(?MODULE, Rep, {json_verbose, ?MODULE})) end || {Res, Rep} <- Tests].
 -endif.

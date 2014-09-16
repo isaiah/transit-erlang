@@ -35,11 +35,11 @@ time_point_ms() ->
 
 null() -> return(undefined).
 
-keyword() -> atom().
+keyword() ->
+  ?LET(S, eqc_lib:utf8_string(), {kw, S}).
 
 symbol() ->
-    ?LETSHRINK([Sym], [oneof([atom(), eqc_lib:utf8_string()])],
-        transit_types:symbol(Sym)).
+    ?LET(S, eqc_lib:utf8_string(), {sym, S}).
 
 large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
 
@@ -52,18 +52,18 @@ set(G) ->
          sets:from_list(L)).
 
 transit_time() ->
-    ?SHRINK(?LET(TP, time_point_ms(), transit_types:datetime(TP)), [null()]).
+    ?SHRINK(?LET(TP, time_point_ms(), {timepoint, TP}), [null()]).
 
 transit_uuid() ->
     ?SHRINK(?LET(UUID, eqc_lib:uuid(), {uuid, UUID}), [null()]).
 
 transit_uri() ->
     ?LET(URI, eqc_lib:uri(),
-      transit_types:uri(URI)).
+      {uri, URI}).
 
 transit_binary() ->
 	?LET(Bin, binary(),
-		transit_types:binary(Bin)).
+	  {binary, Bin}).
 
 special_number() ->
 	elements([nan, infinity, neg_infinity]).
@@ -96,7 +96,7 @@ transit(N) ->
         {N, ?LAZY(
           ?LET(K, nat(),
             ?LET(L, transit_l(K+1, N, fun transit/1),
-              t_shrink(transit_types:list(L)))))},
+              t_shrink({list, L}))))},
         {N, ?LAZY(?LET(K, nat(),
                     ?LETSHRINK([Ks, Vs], [transit_l(K+1, N div 2, fun transit/1),
                                           transit_l(K+1, N div 2, fun transit/1)],
@@ -155,13 +155,13 @@ term_type(M) when is_map(M) ->
   Values = lists:flatten([term_type(K) || K <- maps:values(M)]),
   lists:usort([map] ++ Keys ++ Values);
 term_type({uuid, _}) -> [uuid];
-term_type({tagged_value, <<"$">>, _}) -> [symbol];
-term_type({tagged_value, <<"r">>, _}) -> [uri];
-term_type({tagged_value, <<"b">>, _}) -> [binary];
-term_type({tagged_value, <<"list">>, L}) ->
+term_type({sym, _}) -> [symbol];
+term_type({uri, _}) -> [uri];
+term_type({binary, _}) -> [binary];
+term_type({list, L}) ->
   Underlying = lists:flatten([term_type(K) || K <- L]),
   lists:usort([list | Underlying]);
-term_type({transit_datetime,_}) -> [time];
+term_type({timepoint,_}) -> [time];
 term_type(Ty) ->
   case sets:is_set(Ty) of
     true ->
@@ -182,25 +182,25 @@ prop_iso_json() -> ?FORALL(T, term(), iso(json, T)).
 prop_iso_json_verbose() -> ?FORALL(T, term(), iso(json_verbose, T)).
 prop_iso_msgpack() -> ?FORALL(T, term(), iso(msgpack, T)).
 
-prop_integer() -> ?FORALL(I, integer(), iso(json, I)).
-prop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
-prop_string() -> ?FORALL(S, eqc_lib:utf8_string(), iso(json, S)).
-prop_keyword() -> ?FORALL(KW, keyword(), iso(json, KW)).
-prop_symbol() -> ?FORALL(S, symbol(), iso(json, S)).
+xprop_integer() -> ?FORALL(I, integer(), iso(json, I)).
+xprop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
+xprop_string() -> ?FORALL(S, eqc_lib:utf8_string(), iso(json, S)).
+xprop_keyword() -> ?FORALL(KW, keyword(), iso(json, KW)).
+xprop_symbol() -> ?FORALL(S, symbol(), iso(json, S)).
 
-prop_timestamp_json() ->
+xprop_timestamp_json() ->
   ?FORALL(TS, transit_time(),
     iso(json, TS)).
-prop_timestamp_json_verbose() ->
+xprop_timestamp_json_verbose() ->
   ?FORALL(TS, transit_time(),
     iso(json_verbose, TS)).
-prop_timestamp_msgpack() ->
+xprop_timestamp_msgpack() ->
   ?FORALL(TS, transit_time(),
     iso(msgpack, TS)).
 
 ms({Mega, Secs, Micro}) -> {Mega, Secs, (Micro div 1000) * 1000}.
 
-prop_time() ->
+xprop_time() ->
     ?FORALL(TP, time_point(),
       begin
           Coded = transit_utils:timestamp_to_ms(TP),

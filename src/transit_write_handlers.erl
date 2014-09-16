@@ -75,21 +75,6 @@ map_string_rep(_M) ->
 
 const(K) -> fun (_) -> K end.
 
-%%% Keyword handler
-keyword_tag(_K) ->
-  ?KEYWORD.
-keyword_rep(K) ->
-  K.
-keyword_string_rep(K) -> atom_to_binary(K, utf8).
-
-%%% date handler
-datetime_tag(_D) ->
-  ?DATE.
-datetime_rep(_T=#transit_datetime{timestamp=Timestamp}) ->
-  transit_utils:timestamp_to_ms(Timestamp).
-datetime_string_rep(D=#transit_datetime{}) ->
-  integer_to_binary(datetime_rep(D)).
-
 special_number() ->
     F = fun (nan) -> <<"NaN">>;
             (infinity) -> <<"INF">>;
@@ -116,44 +101,63 @@ handler(Data) when is_binary(Data) ->
   #write_handler{tag = fun binary_tag/1, rep = fun binary_rep/1, string_rep = fun binary_string_rep/1};
 handler(Data) when is_map(Data) ->
   #write_handler{tag = fun map_tag/1, rep = fun map_rep/1, string_rep = fun map_string_rep/1};
-handler(Data) when is_atom(Data) ->
-  case Data of
-    undefined ->
-      #write_handler{tag = fun undefined_tag/1, rep = fun undefined_rep/1, string_rep = fun undefined_string_rep/1};
-    nan -> special_number();
-    infinity -> special_number();
-    neg_infinity -> special_number();
-    _ ->
-      #write_handler{tag = fun keyword_tag/1, rep = fun keyword_rep/1, string_rep = fun keyword_string_rep/1}
-  end;
-handler(Data) when is_record(Data, transit_datetime) ->
-  #write_handler{tag=fun datetime_tag/1, rep=fun datetime_rep/1, string_rep=fun datetime_string_rep/1};
-handler(#tagged_value { tag = ?BINARY }) ->
+handler({kw, _}) ->
   #write_handler {
-  	tag = fun (#tagged_value { tag = Tag }) -> Tag end,
-  	rep = fun (#tagged_value { rep = Data }) -> Data end,
-  	string_rep = fun (#tagged_value { rep = Data }) -> base64:encode(Data) end
+    tag = fun({kw, _}) -> ?KEYWORD end,
+    rep = fun({kw, KW}) -> KW end,
+    string_rep = fun({kw, KW}) -> KW end
+  };
+handler(undefined) ->
+  #write_handler{tag = fun undefined_tag/1, rep = fun undefined_rep/1, string_rep = fun undefined_string_rep/1};
+handler(nan) -> special_number();
+handler(infinity) -> special_number();
+handler(neg_infinity) -> special_number();
+handler({timepoint, _}) ->
+  #write_handler {
+    tag = fun ({timepoint, _}) -> ?DATE end,
+    rep = fun ({timepoint, TP}) -> transit_utils:timestamp_to_ms(TP) end,
+    string_rep = fun ({timepoint, TP}) -> integer_to_binary(transit_utils:timestamp_to_ms(TP)) end
+  };
+handler({binary, _}) ->
+  #write_handler {
+  	tag = fun ({binary, _}) -> ?BINARY end,
+  	rep = fun ({binary, Bin}) -> base64:encode(Bin) end,
+  	string_rep = fun ({binary, Bin}) -> base64:encode(Bin) end
   };
 handler({uuid, _}) ->
   #write_handler { tag = fun({uuid, _}) -> ?UUID end,
                    rep = fun({uuid, UUID}) -> UUID end,
                    string_rep = fun({uuid, UUID}) -> UUID end
                  };
-handler(_TaggedVal=#tagged_value{}) ->
-  #write_handler{tag=fun(_T=#tagged_value{tag=Tag}) -> Tag end,
-                        %(Tag) -> Tag end,
-                 rep=fun(_T=#tagged_value{rep=Rep}) -> Rep end,
-                        %(Rep) -> Rep end,
-                 string_rep = fun(_T=#tagged_value{rep=Rep}) -> Rep end
-                };
+handler({sym, _}) ->
+  #write_handler { tag = fun({sym, _}) -> ?SYMBOL end,
+                   rep = fun({sym, Symb}) when is_binary(Symb) -> Symb end,
+                   string_rep = fun({sym, Symb}) when is_binary(Symb) -> Symb end
+  };
+handler({uri, _}) ->
+  #write_handler { tag = fun({uri, _}) -> ?URI end,
+                   rep = fun({uri, URI}) -> URI end,
+                   string_rep = fun({uri, URI}) -> URI end
+  };
+handler({list, _}) ->
+  #write_handler { tag = fun({list, _}) -> ?LIST end,
+                   rep = fun({list, L}) -> L end,
+                   string_rep = fun(_) -> exit({error, lists_have_no_string_rep}) end
+  };
+handler(#tagged_value{}) ->
+  #write_handler {
+  	tag = fun(#tagged_value { tag = Tag }) -> Tag end,
+  	rep = fun(#tagged_value { rep = Rep}) -> Rep end,
+  	string_rep = fun(#tagged_value { rep = Rep}) -> Rep end
+  };
 handler(Data) ->
   case transit_utils:is_set(Data) of
     undefined ->
       undefined;
     Set ->
       #write_handler{tag=fun(_) -> ?SET end,
-                     rep=fun(Rep) -> #tagged_value{tag=?ARRAY, rep=Set:to_list(Rep)} end,
-                     string_rep=fun(_) -> undefined end}
+                     rep=fun(Rep) -> Set:to_list(Rep) end,
+                     string_rep=fun(_) -> exit({error, sets_have_no_string_rep}) end}
   end.
 
 tag(Data) ->
@@ -170,7 +174,7 @@ tag(Data) ->
 handler_test_() ->
   Tests = [{?INT, 1234},
            {?MAP, #{}},
-           {?KEYWORD, hi},
+           {?KEYWORD, {kw, <<"hi">>}},
            {?NULL, undefined}
           ],
   [fun() ->

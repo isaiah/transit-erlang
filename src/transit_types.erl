@@ -8,37 +8,27 @@
 -type datetime() :: #transit_datetime{}.
 -export_type([datetime/0]).
 
--spec datetime(Timestamp) ->
-  DateTime when Timestamp :: erlang:timestamp(), DateTime :: datetime().
 datetime({_, _, _} = Timestamp) ->
-  #transit_datetime{timestamp=Timestamp}.
+  {timepoint, Timestamp}.
 
-uri(URI) ->
-  tv(?URI, URI).
+uri(URI) -> {uri, URI}.
 
 link(Link) ->
   tv(?LINK, Link).
 
-uuid(ID) ->
-  tv(?UUID, ID).
+uuid(ID) -> {uuid, ID}.
 
-binary(B) ->
-  tv(?BINARY, B).
+binary(B) -> {binary, B}.
 
-symbol(S) when is_bitstring(S) ->
-  tv(?SYMBOL, S);
-symbol(S) when is_list(S) ->
-  tv(?SYMBOL, list_to_binary(S));
-symbol(S) when is_atom(S) ->
-  tv(?SYMBOL, atom_to_binary(S, utf8)).
+symbol(S) when is_binary(S) -> {sym, S};
+symbol(S) when is_list(S) -> {sym, list_to-binary(S)};
+symbol(S) when is_atom(S) -> {sym, atom_to_binary(S, utf8)}.
 
 bigint(I) ->
   tv(?BIGINT, integer_to_binary(I)).
 
-list(A) when is_tuple(A) ->
-  tv(?LIST, tuple_to_list(A));
-list(A) ->
-  tv(?LIST, A).
+list(A) when is_tuple(A) -> {list, tuple_to_list(A)};
+list(A) -> {list, A}.
 
 tv(Tag, Value) ->
   #tagged_value{tag=Tag, rep=Value}.

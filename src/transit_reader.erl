@@ -121,21 +121,21 @@ handle(?FLOAT, Rep) -> binary_to_float(Rep);
 handle(?QUOTE, null) -> undefined;
 handle(?QUOTE, Rep) -> Rep;
 handle(?SET, Rep) -> sets:from_list(Rep);
-handle(?LIST, Rep) -> transit_types:list(Rep);
-handle(?KEYWORD, Rep) -> binary_to_existing_atom(Rep, utf8);
-handle(?SYMBOL, Rep) -> transit_types:symbol(Rep);
-handle(?DATE, Rep) when is_integer(Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(Rep));
-handle(?DATE, Rep) -> transit_types:datetime(transit_utils:ms_to_timestamp(binary_to_integer(Rep)));
+handle(?LIST, Rep) -> {list, Rep};
+handle(?KEYWORD, Rep) -> {kw, Rep};
+handle(?SYMBOL, Rep) -> {sym, Rep};
+handle(?DATE, Rep) when is_integer(Rep) -> {timepoint, transit_utils:ms_to_timestamp(Rep)};
+handle(?DATE, Rep) -> {timepoint, transit_utils:ms_to_timestamp(binary_to_integer(Rep))};
 handle(?SPECIAL_NUMBER, <<"NaN">>) -> nan;
 handle(?SPECIAL_NUMBER, <<"INF">>) -> infinity;
 handle(?SPECIAL_NUMBER, <<"-INF">>) -> neg_infinity;
-handle(?BINARY, Rep) ->
-	Data = base64:decode(Rep),
-	transit_types:binary(Data);
-handle(?VERBOSEDATE, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
+handle(?BINARY, Rep) -> {binary, base64:decode(Rep)};
+handle(?VERBOSEDATE, Rep) -> {timepoint, transit_utils:iso_8601_to_timestamp(Rep)};
 handle(?UUID, [_, _] = U) -> transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
 handle(?UUID, Rep) -> {uuid, Rep};
-handle(Tag, Value) -> #tagged_value { tag = Tag, rep = Value }.
+handle(?URI, Rep) -> {uri, Rep};
+handle(Extension, Rep) ->
+  transit_types:tv(Extension, Rep).
 
 list_to_proplist([]) -> [];
 list_to_proplist([K,V|Tail]) -> [{K,V}|list_to_proplist(Tail)].
@@ -162,8 +162,8 @@ unmarshal_quoted(C) ->
            {undefined, <<"[\"~#'\", null]">>},
            {true, <<"[\"~#'\", true]">>},
            {false, <<"[\"~#'\", false]">>},
-           {'~', <<"[\"~#'\",\"~:~\"]">>},
-           {'^', <<"[\"~#'\",\"~:^\"]">>},
+           {{kw, <<"~">>}, <<"[\"~#'\",\"~:~\"]">>},
+           {{kw, <<"^">>}, <<"[\"~#'\",\"~:^\"]">>},
            {<<"~hello">>, <<"[\"~#'\",\"~~hello\"]">>},
            {transit_types:symbol(<<"hello">>), <<"[\"~#'\",\"~$hello\"]">>},
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>}
@@ -172,14 +172,15 @@ unmarshal_quoted(C) ->
   [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
 unmarshal_extend(C) ->
-  Tests = [{[[c, undefined]], <<"[[\"~:c\",null]]">>},
+  Tests = [{[[{kw, <<"c">>}, undefined]], <<"[[\"~:c\",null]]">>},
            {[], <<"[]">>},
            {#{}, <<"{}">>},
            {maps:from_list([{<<"foo">>, <<"bar">>}]), <<"{\"foo\":\"bar\"}">>},
            {maps:from_list([{<<"a">>, <<"b">>}, {3, 4}]), <<"[\"^ \",\"a\",\"b\",3,4]">>},
-           {maps:from_list([{a, b}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
+           {maps:from_list([{{kw, <<"a">>},
+                             {kw, <<"b">>}}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
-           {maps:from_list([{foo, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}],
+           {maps:from_list([{{kw, <<"foo">>}, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}],
   [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
 
 parse_string_test_() ->

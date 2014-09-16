@@ -140,39 +140,39 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",1234]">>, 1234},
            {<<"[\"~#'\",true]">>, true},
            {<<"[\"~#'\",false]">>, false},
-           {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
+           {<<"[\"~#'\",\"~m0\"]">>, {timepoint, {0,0,0}}},
            {<<"[\"~#'\",2.5]">>, 2.5},
            {<<"[\"~#'\",2.998e8]">>, 2.998E8},
            {<<"[\"~#'\",9007199254740992]">>,9007199254740992},
            {<<"[\"~#'\",\"~i9007199254740993\"]">>,9007199254740993},
-           {<<"[\"~#'\",\"~n1\"]">>,transit_types:bigint(1)},
            %{<<"[\"~#'\",\"~n9223372036854775806\"]">>,9223372036854775806},
            {<<"[\"~#'\",[126,104,101,108,108,111]]">>, "~hello"},
-           {<<"[\"~#'\",\"~$hello\"]">>, transit_types:symbol("hello")}
+           {<<"[\"~#'\",\"~$hello\"]">>, {sym, <<"hello">>}}
           ],
   [fun() -> {Raw, _} = emit_tagged(#tagged_value{tag=?QUOTE, rep=Rep}, Env),
             Res = jsx:encode(Raw)
    end || {Res, Rep} <- Tests].
 
 marshals_extend(_Env) ->
+  A = {kw, <<"a">>},
   Tests = [{<<"[]">>, []},
            {<<"[\"^ \"]">>, [{}]},
            {<<"[\"^ \"]">>, #{}},
            %{<<"[\"\"]">>, [""]},
            {<<"[\"\"]">>, [<<"">>]},
-           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, a]},
-           {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, #{a => b, 3 => 4}},
+           {<<"[\"a\",2,\"~:a\"]">>, [<<"a">>, 2, A]},
+           {<<"[\"^ \",\"~:a\",\"~:b\",\"~i3\",4]">>, #{{kw, <<"a">>} => {kw, <<"b">>}, 3 => 4}},
            {<<"[\"^ \",\"a\",\"b\",\"~i3\",4]">>, #{<<"a">> => <<"b">>, 3 => 4}},
            {<<"[[\"^ \",\"foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
              [#{ <<"foobar">> => <<"foobar">>},#{ <<"foobar">> => <<"foobar">>}]},
            {<<"[[\"^ \",\"~:foobar\",\"foobar\"],[\"^ \",\"^0\",\"foobar\"]]">>,
-             [#{foobar => <<"foobar">>},#{foobar => <<"foobar">>}]},
-           {<<"[\"~:atom-1\"]">>, ['atom-1']},
+             [#{{kw, <<"foobar">>} => <<"foobar">>},#{{kw, <<"foobar">>} => <<"foobar">>}]},
+           {<<"[\"~:atom-1\"]">>, [{kw, <<"atom-1">>}]},
            {<<"[\"~~hello\"]">>, [<<"~hello">>]},
            {<<"[\"~rhttp://google.com\"]">>, [transit_types:uri("http://google.com")]},
            {<<"[\"~u531a379e-31bb-4ce1-8690-158dceb64be6\"]">>, [transit_types:uuid("531a379e-31bb-4ce1-8690-158dceb64be6")]},
            {<<"[\"~#'\",\"~m0\"]">>, transit_types:datetime({0,0,0})},
-           {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary("c3VyZS4=")]},
+           {<<"[\"~bc3VyZS4=\"]">>, [transit_types:binary(<<"sure.">>)]},
            {<<"[\"~#set\",[\"baz\",\"foo\",\"bar\"]]">>, sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>])}
           ],
   [fun() -> Res = jsx:encode(transit_marshaler:marshal_top(?MODULE, Rep, {json, ?MODULE})) end || {Res, Rep} <- Tests].

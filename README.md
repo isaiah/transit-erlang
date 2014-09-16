@@ -40,8 +40,8 @@ These benchmarks are run on a Lenovo Thinkpad W540 with a 16 Gigabyte RAM config
 Timings run 300 rounds of encoding of the file `transit-format/examples/0.8/example.json` and then we divide down to get the
 encoder time for each round. This then forms the base benchmark.
 
-| Commit | Test | Format | Timing ms |
-| ------ | ---- | ------ | --------- |
+| Commit | Test |  Timing ms |
+| ------ | ---- | ------ |
 | 3d3b04e | JSON | Read | 9.976 |
 | 3d3b04e | JSON | Write | 20.810 |
 | 3d3b04e | JSON | ISO | 31.987 |
@@ -73,7 +73,13 @@ Current limitations
 Default type mapping
 --------------------
 
-We currently handle the types in the given table with the given mappings. Of notable omissions:
+We currently handle the types in the given table with the given mappings.
+
+*Rationale for the mapping*: The problem we face in Erlang w.r.t transit is that we can't really map external data directly into `atom()` types. The reason is the atom-table is limited and an enemy can easily outrun it. Other language implementations are not with this limit, so they will just use keywords as they go along, ignoring all limitations of them in Erlang. Thus, we opt for a solution where the low-level mapping is to map a lot of things into binary types, but tag them as we do so to discriminate them.
+
+We chose to handle a "naked" `binary()` as an UTF-8 string.
+
+We are currently not able to support:
 
 * Link types
 
@@ -84,16 +90,15 @@ We currently handle the types in the given table with the given mappings. Of not
 | boolean      | true, false               | true, false               |
 | integer      | integer()                 | integer()                 |
 | decimal      | float()                   | float()                   |
-| keyword      | atom()                    | atom()                    |
-| symbol       | transit\_types:symbol/1   | transit\_types:symbol()   |
-| big decimal  | float()                   | float()                   |
 | big integer  | integer()                 | integer()                 |
-| time         | transit\_types:datetime/1 | transit\_types:datetime() |
-| uri          | transit\_types.URI        | transit\_types.URI        |
-| uuid         | {uuid, UUID}                 | {uuid, UUID}                 |
-| bytes		   | transit\_types:binary/1   | transit_types:binary/1    |
+| time         | {timepoint, now()}        | {timepoint, now()         |
+| keyword      | {kw, binary()}            | {kw, binary()}
+| symbol       | {sym, binary()}        | {sym, binary()}        |
+| uri          | {uri, binary()}           | {uri, binary()}        |
+| uuid         | {uuid, binary()}                 | {uuid, binary()}                  |
+| bytes		   | {binary, binary()}   | {binary, binary()}  |
 | special number | nan, infinity, neg_infinity | nan, infinity, neg_infinity |
 | array        | list                      | list                      |
-| list         | transit\_types:list/1     | transit\_types:list()     |
+| list         | {list, list(transit())}     | {list, list(transit())}     |
 | set          | sets, gb\_sets, ordsets   | sets                      |
 | map          | map                       | map                       |

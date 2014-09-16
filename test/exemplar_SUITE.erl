@@ -3,70 +3,72 @@
 -export([all/0, groups/0, suite/0]).
 
 %%% exemplar tests
--export([nil_exemplar/1,
+-export([
+         doubles_interesting_exemplar/1,
+         doubles_small_exemplar/1,
          false_exemplar/1,
-         true_exemplar/1,
-         zero_exemplar/1,
-         one_exemplar/1,
-         one_string_exemplar/1,
-         one_keyword_exemplar/1,
-         one_symbol_exemplar/1,
-         one_date_exemplar/1,
-         vector_simple_exemplar/1,
-         vector_empty_exemplar/1,
-         vector_mixed_exemplar/1,
-         vector_nested_exemplar/1,
-         small_strings_exemplar/1,
-         strings_tilde_exemplar/1,
-         strings_hash_exemplar/1,
-         strings_hat_exemplar/1,
          ints_exemplar/1,
-         small_ints_exemplar/1,
          ints_interesting_exemplar/1,
          ints_interesting_neg_exemplar/1,
-         doubles_small_exemplar/1,
-         doubles_interesting_exemplar/1,
-         one_uuid_exemplar/1,
-         uuids_exemplar/1,
-         one_uri_exemplar/1,
-         uris_exemplar/1,
-         symbols_exemplar/1,
          keywords_exemplar/1,
-         list_simple_exemplar/1,
          list_empty_exemplar/1,
          list_mixed_exemplar/1,
          list_nested_exemplar/1,
-         set_simple_exemplar/1,
+         list_simple_exemplar/1,
+         map_10_items_exemplar/1,
+         map_mixed_exemplar/1,
+         map_nested_exemplar/1,
+         map_nested_exemplars/1,
+         map_numeric_keys_exemplar/1,
+         maps_four_char_string_keys_exemplar/1,
+         maps_four_char_sym_keys_exemplar/1,
+         map_simple_exemplar/1,
+         maps_three_char_string_keys_exemplar/1,
+         maps_three_char_sym_keys_exemplar/1,
+         map_string_keys_exemplar/1,
+         maps_two_char_string_keys_exemplar/1,
+         maps_two_char_sym_keys_exemplar/1,
+         maps_unrecognized_keys_exemplar/1,
+         map_unrecognized_vals_exemplar/1,
+         map_vector_keys_exemplar/1,
+	nil_exemplar/1,
+         one_date_exemplar/1,
+         one_exemplar/1,
+         one_keyword_exemplar/1,
+         one_string_exemplar/1,
+         one_symbol_exemplar/1,
+         one_uri_exemplar/1,
+         one_uuid_exemplar/1,
          set_empty_exemplar/1,
          set_mixed_exemplar/1,
          set_nested_exemplar/1,
-         map_simple_exemplar/1,
-         map_mixed_exemplar/1,
-         map_nested_exemplar/1,
-         map_string_keys_exemplar/1,
-         map_numeric_keys_exemplar/1,
-         map_vector_keys_exemplar/1,
-         map_unrecognized_vals_exemplar/1,
-         vector_unrecognized_vals_exemplar/1,
+         set_simple_exemplar/1,
+         small_ints_exemplar/1,
+         small_strings_exemplar/1,
+         strings_hash_exemplar/1,
+         strings_hat_exemplar/1,
+         strings_tilde_exemplar/1,
+         symbols_exemplar/1,
+         true_exemplar/1,
+         uris_exemplar/1,
+         uuids_exemplar/1,
          vector_1935_keywords_repeated_twice_exemplar/1,
          vector_1936_keywords_repeated_twice_exemplar/1,
          vector_1937_keywords_repeated_twice_exemplar/1,
-         map_10_items_exemplar/1,
-         maps_two_char_sym_keys_exemplar/1,
-         maps_three_char_sym_keys_exemplar/1,
-         maps_four_char_sym_keys_exemplar/1,
-         maps_two_char_string_keys_exemplar/1,
-         maps_three_char_string_keys_exemplar/1,
-         maps_four_char_string_keys_exemplar/1,
-         maps_unrecognized_keys_exemplar/1,
-         map_nested_exemplars/1
+         vector_empty_exemplar/1,
+         vector_mixed_exemplar/1,
+         vector_nested_exemplar/1,
+         vector_simple_exemplar/1,
+         vector_unrecognized_vals_exemplar/1,
+         zero_exemplar/1
+
         ]).
 
 
 -define(datadir, "../../transit-format/examples/0.8/simple/").
 
 -define(ArraySimple, [1,2,3]).
--define(ArrayMixed, [0, 1, 2.0, true, false, <<"five">>, six, transit_types:symbol("seven"), <<"~eight">>, undefined]).
+-define(ArrayMixed, [0, 1, 2.0, true, false, <<"five">>, {kw, <<"six">>}, transit_types:symbol(<<"seven">>), <<"~eight">>, undefined]).
 -define(ArrayNested, [?ArraySimple, ?ArrayMixed]).
 -define(SmallStrings, [<<>>, <<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"abcdef">>]).
 -define(SetSimple, sets:from_list(?ArraySimple)).
@@ -77,12 +79,12 @@
 -define(ListMixed, transit_types:list(?ArrayMixed)).
 -define(ListNested, transit_types:list([transit_types:list(?ArraySimple), transit_types:list(?ArrayMixed)])).
 
--define(MapSimple, #{a => 1, b => 2, c => 3}).
--define(MapMixed, #{a => 1, b => <<"a string"/utf8>>, c => true}).
--define(MapNested, #{simple => ?MapSimple, mixed => ?MapMixed}).
-%-define(MapSimple, [{a,1},{b,2},{c,3}]).
-%-define(MapMixed, [{a,1}, {b, <<"a string"/utf8>>}, {c, true}]).
-%-define(MapNested, [{simple, ?MapSimple}, {mixed, ?MapMixed}]).
+-define(MapSimple, #{{kw, <<"a">>} => 1, {kw, <<"b">>}  => 2, {kw, <<"c">>} => 3}).
+-define(MapMixed, #{{kw, <<"a">>} => 1, {kw, <<"b">>} => <<"a string"/utf8>>, {kw, <<"c">>} => true}).
+-define(MapNested, #{{kw, <<"simple">>} => ?MapSimple, {kw, <<"mixed">>}  => ?MapMixed}).
+%-define(MapSimple, [{{kw, <<"a">>},1},{{kw, <<"b">>},2},{{kw, <<"c">>},3}]).
+%-define(MapMixed, [{{kw, <<"a">>},1}, {{kw, <<"b">>}, <<"a string"/utf8>>}, {{kw, <<"c">>}, true}]).
+%-define(MapNested, [{{kw, <<"simple">>}, ?MapSimple}, {{kw, <<"mixed">>}, ?MapMixed}]).
 
 -define(POWER_OF_TWO, lists:map(fun(X) -> erlang:round(math:pow(2, X)) end, lists:seq(0, 65))).
 -define(INTERESTING_INTS, lists:flatten(lists:map(fun(X) -> lists:seq(X -2, X + 2) end, ?POWER_OF_TWO))).
@@ -101,8 +103,9 @@
                          [{-6106,017600,0}, {0,0,0}, {946,728000,0}, {1396,909037,0}])).
 
 %-define(SYM_STRS, [<<"a">>, <<"ab">>, <<"abc">>, <<"abcd">>, <<"abcde">>, <<"a1">>, <<"b2">>, <<"c3">>, <<"a_b">>]).
--define(KEYWORDS, [a, ab, abc, abcd, abcde, a1, b2, c3, 'a_b']).
--define(SYMBOLS, lists:map(fun(X) -> transit_types:symbol(list_to_binary(atom_to_list(X))) end, ?KEYWORDS)).
+-define(ATOMS, [a, ab, abc, abcd, abcde, a1, b2, c3, 'a_b']).
+-define(KEYWORDS, lists:map(fun(X) -> {kw, atom_to_binary(X, utf8)} end, ?ATOMS)).
+-define(SYMBOLS, lists:map(fun(X) -> transit_types:symbol(list_to_binary(atom_to_list(X))) end, ?ATOMS)).
 
 suite() ->
     [{timetrap, {seconds, 20}}].
@@ -187,9 +190,9 @@ one_exemplar(Conf) ->
 one_string_exemplar(Conf) ->
   exemplar("one_string", <<"hello">>, Conf).
 one_keyword_exemplar(Conf) ->
-  exemplar("one_keyword", hello, Conf).
+  exemplar("one_keyword", {kw, <<"hello">>}, Conf).
 one_symbol_exemplar(Conf) ->
-  exemplar("one_symbol", transit_types:symbol("hello"), Conf).
+  exemplar("one_symbol", transit_types:symbol(<<"hello">>), Conf).
 one_date_exemplar(Conf) ->
   exemplar("one_date", transit_types:datetime({946,728000,0}), Conf).
 vector_simple_exemplar(Conf) ->
@@ -266,32 +269,32 @@ map_vector_keys_exemplar(Conf) ->
   exemplar("map_vector_keys", #{[1,1] => <<"one">>, [2, 2] => <<"two">>}, Conf).
 
 map_unrecognized_vals_exemplar(Conf) ->
-  exemplar("map_unrecognized_vals", #{key => <<"~Unrecognized">>}, Conf).
+  exemplar("map_unrecognized_vals", #{{kw, <<"key">>} => <<"~Unrecognized">>}, Conf).
 vector_unrecognized_vals_exemplar(Conf) ->
   exemplar("vector_unrecognized_vals", [<<"~Unrecognized">>], Conf).
 vector_1935_keywords_repeated_twice_exemplar(Conf) ->
-  exemplar("vector_1935_keywords_repeated_twice", array_of_atoms(1934, 1934*2), Conf).
+  exemplar("vector_1935_keywords_repeated_twice", array_of_keywords(1934, 1934*2), Conf).
 vector_1936_keywords_repeated_twice_exemplar(Conf) ->
-  exemplar("vector_1936_keywords_repeated_twice", array_of_atoms(1935, 1935*2), Conf).
+  exemplar("vector_1936_keywords_repeated_twice", array_of_keywords(1935, 1935*2), Conf).
 vector_1937_keywords_repeated_twice_exemplar(Conf) ->
-  exemplar("vector_1937_keywords_repeated_twice", array_of_atoms(1936, 1936*2), Conf).
+  exemplar("vector_1937_keywords_repeated_twice", array_of_keywords(1936, 1936*2), Conf).
 
 map_10_items_exemplar(Conf) ->
   exemplar("map_10_items", hash_of_size(10), Conf).
 maps_two_char_sym_keys_exemplar(Conf) ->
-  exemplar("maps_two_char_sym_keys", [#{aa => 1, bb => 2},
-                                     #{aa => 3, bb => 4},
-                                     #{aa => 5, bb => 6}],
+  exemplar("maps_two_char_sym_keys", [#{{kw, <<"aa">>} => 1, {kw, <<"bb">>} => 2},
+                                     #{{kw, <<"aa">>} => 3, {kw, <<"bb">>} => 4},
+                                     #{{kw, <<"aa">>} => 5, {kw, <<"bb">>} => 6}],
            Conf).
 maps_three_char_sym_keys_exemplar(Conf) ->
-  exemplar("maps_three_char_sym_keys", [#{aaa => 1, bbb => 2},
-                                        #{aaa => 3, bbb => 4},
-                                        #{aaa => 5, bbb => 6}],
+  exemplar("maps_three_char_sym_keys", [#{{kw, <<"aaa">>} => 1, {kw, <<"bbb">>} => 2},
+                                        #{{kw, <<"aaa">>} => 3, {kw, <<"bbb">>} => 4},
+                                        #{{kw, <<"aaa">>} => 5, {kw, <<"bbb">>} => 6}],
            Conf).
 maps_four_char_sym_keys_exemplar(Conf) ->
-  exemplar("maps_four_char_sym_keys", [#{aaaa => 1, bbbb => 2},
-                                       #{aaaa => 3, bbbb => 4},
-                                       #{aaaa => 5, bbbb => 6}],
+  exemplar("maps_four_char_sym_keys", [#{{kw, <<"aaaa">>} => 1, {kw, <<"bbbb">>} => 2},
+                                       #{{kw, <<"aaaa">>} => 3, {kw, <<"bbbb">>} => 4},
+                                       #{{kw, <<"aaaa">>} => 5, {kw, <<"bbbb">>} => 6}],
            Conf).
 maps_two_char_string_keys_exemplar(Conf) ->
   exemplar("maps_two_char_string_keys", [#{<<"aa">> => 1, <<"bb">> => 2},
@@ -309,15 +312,16 @@ maps_four_char_string_keys_exemplar(Conf) ->
                                           #{<<"aaaa">> => 5, <<"bbbb">> => 6}],
            Conf).
 maps_unrecognized_keys_exemplar(Conf) ->
-  exemplar("maps_unrecognized_keys", [transit_types:tv(<<"abcde">>, anything),
-                                      transit_types:tv(<<"fghij">>, 'anything-else')],
+  exemplar("maps_unrecognized_keys",
+  	       [transit_types:tv(<<"abcde">>, {kw, <<"anything">>}),
+	        transit_types:tv(<<"fghij">>, {kw, <<"anything-else">>})],
           Conf).
 
 map_nested_exemplars(Conf) ->
   lists:foreach(fun(N) ->
                     exemplar(lists:flatten(io_lib:format("map_~p_nested", [N])),
-                             #{f => hash_of_size(N),
-                               s => hash_of_size(N)},
+                             #{{kw, <<"f">>} => hash_of_size(N),
+                               {kw, <<"s">>} => hash_of_size(N)},
                              Conf)
                 end, [10, 1935, 1936, 1937]).
 
@@ -357,5 +361,8 @@ array_of_atoms(M, N) ->
                    end, lists:sublist(Seeds, N rem M), lists:seq(1, N div M))
   end.
 
+array_of_keywords(M, N) ->
+    [{kw, atom_to_binary(A, utf8)} || A <- array_of_atoms(M, N)].
+
 hash_of_size(N) ->
-  maps:from_list(lists:zip(array_of_atoms(N, N), lists:seq(0, N-1))).
+  maps:from_list(lists:zip(array_of_keywords(N, N), lists:seq(0, N-1))).
