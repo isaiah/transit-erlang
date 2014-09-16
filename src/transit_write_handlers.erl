@@ -104,7 +104,7 @@ handler(Data) when is_map(Data) ->
 handler({kw, _}) ->
   #write_handler {
     tag = fun({kw, _}) -> ?KEYWORD end,
-    rep = fun({kw, KW}) -> KW end,
+    rep = fun({kw, KW}) -> {kw, KW} end,
     string_rep = fun({kw, KW}) -> KW end
   };
 handler(undefined) ->
