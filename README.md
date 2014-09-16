@@ -90,7 +90,7 @@ We currently handle the types in the given table with the given mappings. Of not
 | big integer  | integer()                 | integer()                 |
 | time         | transit\_types:datetime/1 | transit\_types:datetime() |
 | uri          | transit\_types.URI        | transit\_types.URI        |
-| uuid         | uuid.UUID                 | uuid.UUID                 |
+| uuid         | {uuid, UUID}                 | {uuid, UUID}                 |
 | bytes		   | transit\_types:binary/1   | transit_types:binary/1    |
 | special number | nan, infinity, neg_infinity | nan, infinity, neg_infinity |
 | array        | list                      | list                      |

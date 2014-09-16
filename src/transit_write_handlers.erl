@@ -134,6 +134,11 @@ handler(#tagged_value { tag = ?BINARY }) ->
   	rep = fun (#tagged_value { rep = Data }) -> Data end,
   	string_rep = fun (#tagged_value { rep = Data }) -> base64:encode(Data) end
   };
+handler({uuid, _}) ->
+  #write_handler { tag = fun({uuid, _}) -> ?UUID end,
+                   rep = fun({uuid, UUID}) -> UUID end,
+                   string_rep = fun({uuid, UUID}) -> UUID end
+                 };
 handler(_TaggedVal=#tagged_value{}) ->
   #write_handler{tag=fun(_T=#tagged_value{tag=Tag}) -> Tag end,
                         %(Tag) -> Tag end,

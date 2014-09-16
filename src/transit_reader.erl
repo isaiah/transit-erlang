@@ -134,7 +134,7 @@ handle(?BINARY, Rep) ->
 	transit_types:binary(Data);
 handle(?VERBOSEDATE, Rep) -> transit_types:datetime(transit_utils:iso_8601_to_timestamp(Rep));
 handle(?UUID, [_, _] = U) -> transit_types:uuid(list_to_binary(transit_utils:uuid_to_string(U)));
-handle(?UUID, Rep) -> transit_types:uuid(Rep);
+handle(?UUID, Rep) -> {uuid, Rep};
 handle(Tag, Value) -> #tagged_value { tag = Tag, rep = Value }.
 
 list_to_proplist([]) -> [];
