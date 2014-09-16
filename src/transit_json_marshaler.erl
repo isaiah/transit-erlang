@@ -122,7 +122,7 @@ handler(_Obj) -> undefined.
 start_server() ->
   transit_marshaler:new_env().
 
-stop_server(Env) ->
+stop_server(_Env) ->
   ok.
 
 marshals_extention_test_() ->
