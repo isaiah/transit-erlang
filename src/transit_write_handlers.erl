@@ -2,8 +2,9 @@
 -behaviour(transit_write_handler).
 -export([handler/1]).
 -export([tag/1]).
--include_lib("transit_format.hrl").
--include_lib("transit_types.hrl").
+
+-include("transit_format.hrl").
+-include("transit_types.hrl").
 
 -define(UUID_MASK, math:pow(2, 64) - 1).
 

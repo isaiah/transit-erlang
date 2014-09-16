@@ -3,7 +3,7 @@
 -export([nocache/0]).
 
 -export([encode/3, decode/3]).
--include_lib("transit_format.hrl").
+-include("transit_format.hrl").
 
 -compile([{inline, [is_cache_key/1, is_cacheable/2]}]).
 
