@@ -16,17 +16,17 @@ erl -pa ebin deps/*/ebin
 ```
 
 ```erlang
-A = transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, json}]).
+A = transit:write(#{<<"a">> => <<"b">>, 3 => 4}, #{ format => json }).
 %% => <<"[\"^ \",\"a\",\"b\",3,4]">>
 transit:read(A, [{format, json}]).
 %% => #{<<"a">> => <<"b">>, 3 => 4}
 
 %%% JSON Verbose mode
-transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, json_verbose}]).
+transit:write(#{<<"a">> => <<"b">>, 3 => 4}, #{ format => json_verbose }).
 %% => <<"{\"~i3\":4,\"a\":\"b\"}">>
 
 %%% msgpack
-transit:write(#{<<"a">> => <<"b">>, 3 => 4}, [{format, msgpack}]).
+transit:write(#{<<"a">> => <<"b">>, 3 => 4}, #{ format => msgpack }).
 %% => <<149,162,94,32,161,97,161,98,163,126,105,51,4>>
 ```
 
@@ -42,24 +42,12 @@ encoder time for each round. This then forms the base benchmark.
 
 | Commit | Test |  Timing ms |
 | ------ | ---- | ------ |
-| 3d3b04e | JSON | Read | 9.976 |
-| 3d3b04e | JSON | Write | 20.810 |
-| 3d3b04e | JSON | ISO | 31.987 |
-| 3d3b04e | MsgPack | Read | 4.901 |
-| 3d3b04e | MsgPack | Write | 12.072 |
-| 3d3b04e | MsgPack | ISO | 15.911 |
-| 3d3b04e | JSON_Verbose | Read | 9.724 |
-| 3d3b04e | JSON_Verbose | Write | 25.638 |
-| 3d3b04e | JSON_Verbose | ISO | 34.236 |
-| c976ce6 | JSON | Read | 8.883 |
-| c976ce6 | JSON | Write | 18.700 |
-| c976ce6 | JSON | ISO | 29.248 |
-| c976ce6 | MsgPack | Read | 3.258 |
-| c976ce6 | MsgPack | Write | 9.051 |
-| c976ce6 | MsgPack | ISO | 11.713 |
-| c976ce6 | JSON_Verbose | Read | 9.572 |
-| c976ce6 | JSON_Verbose | Write | 27.120 |
-| c976ce6 | JSON_Verbose | ISO | 36.613 |
+| 3d3b04e | JSON | #{iso => 31.987, read => 9.976, write => 20.810} |
+| c976ce6 | JSON | #{iso => 29.248, read => 8.883, write => 18.700} |
+| 3d3b04e | MsgPack | #{iso => 15.911, read => 4.901, write => 12.072} |
+| c976ce6 | MsgPack | #{iso => 11.713, read => 3.258, write => 9.051} |
+| 3d3b04e | JSON_Verbose | #{iso => 34.236, read => 9.724, write => 25.638} |
+| c976ce6 | JSON_Verbose | #{iso => 36.613, read => 9.572, write => 27.120} |
 
 Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes in 0.930 ms. These are therefore the minimum timings and the rest is transit-specific overhead of decoding.
 
