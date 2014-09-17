@@ -1,7 +1,8 @@
 -module(transit_json_marshaler).
 -behaviour(transit_marshaler).
 
--include_lib("transit_format.hrl").
+-include("transit_format.hrl").
+-include_lib("transit.hrl").
 
 -export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2, emit_string/3,
          emit_object/2, emit_tagged/2, emit_encoded/3, emit_array/2, emit_map/2,
@@ -45,7 +46,7 @@ emit_float(Rep, Env) ->
   end.
 
 -spec emit_tagged(Rep, Env) -> {Resp, Env}
-  when Rep :: tagged_value(),
+  when Rep :: #tagged_value{},
        Resp :: [binary()],
        Env :: transit_marshaler:env().
 

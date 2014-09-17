@@ -1,52 +1,53 @@
 -module(transit_marshaler).
--include_lib("transit_format.hrl").
+-include("transit_format.hrl").
+-include_lib("transit.hrl").
 
 -export([flatten_map/1, quote_string/1, escape/1, as_map_key/1, force_as_map_key/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
 
 -callback emit_null(Rep, Env) ->
   {Rep, Env}
-    when Rep::bitstring(), Env::env().
+    when Rep::bitstring(), Env::#env{}.
 
 -callback emit_boolean(Rep, Env) ->
   {Rep, Env}
-    when Rep::bitstring(), Env::env().
+    when Rep::bitstring(), Env::#env{}.
 
 -callback emit_int(Rep, Env) ->
   {Rep, Env}
-    when Rep::bitstring(), Env::env().
+    when Rep::bitstring(), Env::#env{}.
 
 -callback emit_float(Rep, Env) ->
   {Rep, Env}
-    when Rep::bitstring(), Env::env().
+    when Rep::bitstring(), Env::#env{}.
 
 -callback emit_tagged(Rep, Env) ->
   {Resp, Env}
-    when Rep::tagged_value(), Resp::bitstring(), Env::env().
+    when Rep::#tagged_value{}, Resp::bitstring(), Env::#env{}.
 
 -callback emit_object(Rep, Env) ->
   {Resp, Env}
-    when Rep::term(), Resp::bitstring(), Env::env().
+    when Rep::term(), Resp::bitstring(), Env::#env{}.
 
 -callback emit_encoded(Tag, Rep, Env) ->
   {Rep, Env}
-    when Tag::bitstring(), Rep::bitstring(), Env::env().
+    when Tag::bitstring(), Rep::bitstring(), Env::#env{}.
 
 -callback emit_array(Rep, Env) ->
   {Resp, Env}
-    when Rep::term(), Resp::bitstring(), Env::env().
+    when Rep::term(), Resp::bitstring(), Env::#env{}.
 
 -callback emit_map(Rep, Env) ->
   {Rep, Env}
-    when Rep::term(), Env::env().
+    when Rep::term(), Env::#env{}.
 
 -callback emit_cmap(Rep, Env) ->
   {Rep, Env}
-    when Rep::term(), Env::env().
+    when Rep::term(), Env::#env{}.
 
 -callback emit_string(Tag, Rep, Env) ->
   {Rep, Env}
-    when Tag::bitstring(), Rep::bitstring(), Env::env().
+    when Tag::bitstring(), Rep::bitstring(), Env::#env{}.
 
 -callback handler(Obj) ->
   Handler when Obj::term(), Handler::transit_write_handlers:writer_handler().
@@ -70,10 +71,10 @@ escape(<<$~, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(<<$`, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(S) -> S.
 
--spec as_map_key(env()) -> boolean().
+-spec as_map_key(#env{}) -> boolean().
 as_map_key(#env{ as_map_key = K }) -> K.
 
--spec cache(env()) -> pid().
+-spec cache(#env{}) -> pid().
 cache( #env{ cache = C }) -> C.
 
 force_as_map_key(AsMapKey, Env) ->
@@ -104,7 +105,7 @@ marshal_top_output(Mod, Object, Env, _) ->
   marshal(Mod, Object, Env).
 
 -spec marshal(module(), any(), S) -> {bitstring(), S}
-    when S :: env().
+    when S :: #env{}.
 marshal(Mod, Obj, #env { as_map_key = AsMapKey } = S) ->
   #write_handler { tag = TagFun,
                    string_rep = StringRep,
@@ -140,7 +141,7 @@ emit_ground(_Mod, _Rep, _S, T) -> {extension, T}.
 new_env() ->
   #env{cache=transit_rolling_cache:empty(json)}.
 
--spec new_env({atom(), module()}) -> env().
+-spec new_env({atom(), module()}) -> #env{}.
 new_env({Format, CustomHandler}) ->
   Env = new_env(),
   Cache = transit_rolling_cache:empty(Format),

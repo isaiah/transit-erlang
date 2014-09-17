@@ -4,7 +4,7 @@
 -export([tag/1]).
 
 -include("transit_format.hrl").
--include("transit_types.hrl").
+-include_lib("transit.hrl").
 
 -define(UUID_MASK, math:pow(2, 64) - 1).
 

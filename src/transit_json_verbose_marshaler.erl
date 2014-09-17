@@ -1,7 +1,7 @@
 -module(transit_json_verbose_marshaler).
 -behaviour(transit_marshaler).
 -include("transit_format.hrl").
--include("transit_types.hrl").
+-include_lib("transit.hrl").
 
 -export([emit_null/2, emit_boolean/2, emit_int/2, emit_float/2]).
 -export([emit_string/3, emit_object/2, emit_tagged/2]).

@@ -32,16 +32,7 @@
                         rep :: fun((any()) -> string()),
                         string_rep :: fun((any()) -> bitstring())}).
 
--record(tagged_value, {tag :: bitstring(), rep :: any()}).
-
--type tagged_value() :: #tagged_value{}.
-
 -record(env, {as_map_key=false :: boolean(),
               cache :: transit_rolling_cache:cache(),
               custom_handler :: module()
              }).
-
--type env()::#env{}.
--export_type([env/0]).
-
-
