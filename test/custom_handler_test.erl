@@ -1,6 +1,6 @@
--module(custome_handler_test).
+-module(custom_handler_test).
 -include_lib("eunit/include/eunit.hrl").
--include_lib("transit_format.hrl").
+-include_lib("transit.hrl").
 
 -export([handler/1]).
 -record(point, {x,y}).

@@ -28,10 +28,6 @@
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 
--record(write_handler, {tag :: fun((any()) -> string()),
-                        rep :: fun((any()) -> string()),
-                        string_rep :: fun((any()) -> bitstring())}).
-
 -record(env, {as_map_key=false :: boolean(),
               cache :: transit_rolling_cache:cache(),
               custom_handler :: module()
