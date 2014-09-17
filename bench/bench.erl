@@ -21,9 +21,9 @@ run(Format, File) ->
 	io:format("ISO~n"),
 	{IsoTiming, ok} = timer:tc(fun() -> run_iso(?ROUNDS, RData, [{format, Format}]) end),
 	#{
-	  read => ReadTiming / ?ROUNDS,
-	  write => WriteTiming / ?ROUNDS,
-	  iso => IsoTiming / ?ROUNDS
+	  read => (ReadTiming / 1000) / ?ROUNDS,
+	  write => (WriteTiming / 1000) / ?ROUNDS,
+	  iso => (IsoTiming / 1000) / ?ROUNDS
 	}.
 	
 run_read(0, _Data, _Opts) -> ok;
