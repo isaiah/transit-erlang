@@ -54,8 +54,6 @@ Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes 
 Current limitations
 --------------------
 
-* We can't generate a keyword 'true' or false due to the current mapping of atoms into keywords.
-* We can't generate a keyword 'nan', 'infinity' or 'neg_infinity' due to special number mappings
 * Points-in-time before the date 1/1 1970 are not encoded and decoded correctly.
 
 Default type mapping
