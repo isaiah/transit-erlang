@@ -12,6 +12,8 @@
 -define(FIRST_ORD, 48).
 -define(MIN_SIZE_CACHEABLE, 4).
 
+-type decode_kind() :: key | value.
+
 -record(cache, { kv :: dict:dict(), vk :: dict:dict() }).
 
 -opaque cache() :: #cache{} | nocache.
@@ -30,33 +32,35 @@ empty(_Format) -> #cache { kv = dict:new(), vk = dict:new() }.
 nocache() ->
   nocache.
 
--spec encode(Cache, Name, boolean()) -> {Name, Cache}
-  when Cache::cache(), Name::bitstring().
+-spec encode(Cache, Name, DecodeKind) -> {Name, Cache}
+  when Cache::cache(),
+       Name::bitstring(),
+       DecodeKind :: decode_kind().
 % XXX(isaiah) A very interesting bug of the compiler, this is emitted
 % and encode_with_cache doesn't know how to handle "nocache".
 %encode(nocache, Name, _AsMapKey) ->
 %  {Name, nocahe};
-encode(Cache, Name, AsMapKey) ->
-  encode_with_cache(Cache, Name, AsMapKey).
+encode(Cache, Name, Kind) ->
+  encode_with_cache(Cache, Name, Kind).
 
-decode(#cache { kv = KV } = C, Name, AsMapKey) ->
+decode(#cache { kv = KV } = C, Name, Kind) ->
   case is_cache_key(Name) of
     true ->
       case dict:find(Name, KV) of
         {ok, Val} -> {Val, C};
         error ->
-          add_cacheable(C, Name, AsMapKey)
+          add_cacheable(C, Name, Kind)
       end;
-    false -> add_cacheable(C, Name, AsMapKey)
+    false -> add_cacheable(C, Name, Kind)
   end;
 %%% no cache
-decode(nocache, Name, _AsMapKey) -> {Name, nocache}.
+decode(nocache, Name, _Kind) -> {Name, nocache}.
 
 %% INTERNALS
 %% ---------------------------------------
 
-add_cacheable(C, Name, AsMapKey) ->
-  case is_cacheable(Name, AsMapKey) of
+add_cacheable(C, Name, Kind) ->
+  case is_cacheable(Name, Kind) of
     true -> encache(C, Name);
     false -> {Name, C}
   end.
@@ -75,17 +79,17 @@ encode_key(Num) ->
     {Lo, Hi} -> <<?SUB/binary, (Hi + ?FIRST_ORD), (Lo + ?FIRST_ORD)>>
   end.
 
--spec is_cacheable(bitstring(), boolean()) -> boolean().
-is_cacheable(Str, true)  when byte_size(Str) >= ?MIN_SIZE_CACHEABLE -> true;
-is_cacheable(_Str, true) -> false;
-is_cacheable(Str, false) when byte_size(Str) >= ?MIN_SIZE_CACHEABLE ->
+-spec is_cacheable(bitstring(), decode_kind()) -> boolean().
+is_cacheable(Str, key)  when byte_size(Str) >= ?MIN_SIZE_CACHEABLE -> true;
+is_cacheable(_Str, key) -> false;
+is_cacheable(Str, value) when byte_size(Str) >= ?MIN_SIZE_CACHEABLE ->
     case Str of
         <<"~#", _/binary>> -> true;
         <<"~:", _/binary>> -> true;
         <<"~$", _/binary>> -> true;
         _ -> false
     end;
-is_cacheable(_Str, false) -> false.
+is_cacheable(_Str, value) -> false.
 
 encache(#cache { kv=KV } = C, N) ->
   case dict:size(KV) > ?CACHE_SIZE of
@@ -102,13 +106,13 @@ encache_(#cache { kv=KV, vk=VK } = C, N) ->
                     vk = dict:store(N, Key, VK) }}
   end.
 
-encode_with_cache(nocache, Name, _AsMapKey) ->
+encode_with_cache(nocache, Name, _Kind) ->
   {Name, nocache};
-encode_with_cache(#cache { kv=KV } = C, Name, AsMapKey) ->
+encode_with_cache(#cache { kv=KV } = C, Name, Kind) ->
   case dict:find(Name, KV) of
     {ok, Val} -> {Val, C};
     error ->
-      case is_cacheable(Name, AsMapKey) of
+      case is_cacheable(Name, Kind) of
         true ->
           encache(C, Name);
         false ->
@@ -127,18 +131,18 @@ is_cache_key_test_() ->
   ?_assertNot(is_cache_key(<<"">>)).
 
 is_cacheable_test_() ->
-  ?_assert(is_cacheable(<<"~#tag">>, false)),
-  ?_assertNot(is_cacheable(<<"~#tag">>, true)),
-  ?_assert(is_cacheable(<<"~:foobar">>, true)),
-  ?_assert(is_cacheable(<<"foobar">>, true)),
-  ?_assertNot(is_cacheable(<<"foobar">>, false)).
+  ?_assert(is_cacheable(<<"~#tag">>, value)),
+  ?_assertNot(is_cacheable(<<"~#tag">>, key)),
+  ?_assert(is_cacheable(<<"~:foobar">>, key)),
+  ?_assert(is_cacheable(<<"foobar">>, key)),
+  ?_assertNot(is_cacheable(<<"foobar">>, value)).
 
 encache_test() ->
   {_, C} = encache(empty(json), <<"foobar">>),
-  {<<"^0">>, _} = encode_with_cache(C, <<"foobar">>, true).
+  {<<"^0">>, _} = encode_with_cache(C, <<"foobar">>, key).
 
 decode_test_() ->
-  Tests = [{<<"~#list">>, false}, {<<"aaaa">>, true}],
+  Tests = [{<<"~#list">>, value}, {<<"aaaa">>, key}],
   [fun() ->
        Cache = empty(json),
        {_, #cache{} = Cache1} = decode(Cache, Val, AsMapKey),

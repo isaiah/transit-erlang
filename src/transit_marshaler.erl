@@ -2,7 +2,7 @@
 -include("transit_format.hrl").
 -include_lib("transit.hrl").
 
--export([flatten_map/1, quote_string/1, escape/1, as_map_key/1, force_as_map_key/2]).
+-export([flatten_map/1, quote_string/1, escape/1, context/1, force_context/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).
 
 -callback emit_null(Rep, Env) ->
@@ -71,14 +71,14 @@ escape(<<$~, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(<<$`, _/binary>> = S) -> <<?ESC/binary, S/binary>>;
 escape(S) -> S.
 
--spec as_map_key(#env{}) -> boolean().
-as_map_key(#env{ as_map_key = K }) -> K.
+-spec context(#env{}) ->  boolean().
+context(#env{context = K}) -> K.
 
 -spec cache(#env{}) -> pid().
 cache( #env{ cache = C }) -> C.
 
-force_as_map_key(AsMapKey, Env) ->
-  Env#env{as_map_key=AsMapKey}.
+force_context(Kind, Env) ->
+  Env#env{ context = Kind}.
 
 find_handler(Mod, Obj, Env) ->
   case Mod:handler(Obj) of
@@ -106,13 +106,13 @@ marshal_top_output(Mod, Object, Env, _) ->
 
 -spec marshal(module(), any(), S) -> {bitstring(), S}
     when S :: #env{}.
-marshal(Mod, Obj, #env { as_map_key = AsMapKey } = S) ->
+marshal(Mod, Obj, #env { context = Kind } = S) ->
   #write_handler { tag = TagFun,
                    string_rep = StringRep,
                    rep = Repr } = find_handler(Mod, Obj, S),
-  Rep = case AsMapKey of
-          true -> StringRep(Obj);
-          false -> Repr(Obj)
+  Rep = case Kind of
+          key -> StringRep(Obj);
+          value -> Repr(Obj)
         end,
   case emit_ground(Mod, Rep, S, TagFun(Obj)) of
     {extension, Tag} when is_list(Rep), byte_size(Tag) == 1 ->

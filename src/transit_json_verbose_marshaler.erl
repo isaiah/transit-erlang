@@ -12,8 +12,8 @@
   {Resp, Env} when Rep::term(), Resp::bitstring(), Env::transit_marshaler:env().
 emit_map(M, S1) when is_map(M) ->
   {Body, S2} = maps:fold(fun (K, V, {In, NS1}) ->
-                        {MK, NS2} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_as_map_key(true, NS1)),
-                        {MV, NS3} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_as_map_key(false, NS2)),
+                        {MK, NS2} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_context(key, NS1)),
+                        {MV, NS3} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_context(value, NS2)),
                         {[{MK, MV}|In], NS3}
                     end,
                     {[], S1}, M),
@@ -28,8 +28,8 @@ emit_map([], Env) ->
 emit_map([{}], Env) ->
   {[{}], Env};
 emit_map([{K,V}|Tail], Env) ->
-  {MK, NS1} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_as_map_key(true, Env)),
-  {MV, NS2} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_as_map_key(false, NS1)),
+  {MK, NS1} = transit_marshaler:marshal(?MODULE, K, transit_marshaler:force_context(key, Env)),
+  {MV, NS2} = transit_marshaler:marshal(?MODULE, V, transit_marshaler:force_context(value, NS1)),
   {MTail, NS3} = emit_map(Tail, NS2),
   {[{MK, MV}|MTail], NS3}.
 
@@ -43,12 +43,12 @@ emit_string(Tag, Rep, Env) ->
   emit_object(<<Tag/binary, Rep/binary>>, Env).
 
 emit_tagged(_TaggedValue=#tagged_value{tag=Tag, rep=Rep}, S) ->
-  S0 = transit_marshaler:force_as_map_key(true, S),
+  S0 = transit_marshaler:force_context(key, S),
   Cache = transit_marshaler:cache(S),
-  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
+  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:context(S0)),
   S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
-  S3 = transit_marshaler:force_as_map_key(false, S2),
+  S3 = transit_marshaler:force_context(value, S2),
   {Body, S4} =  transit_marshaler:marshal(?MODULE, Rep, S3),
   {[{Tag1, Body}], S4}.
 

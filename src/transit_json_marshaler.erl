@@ -12,36 +12,36 @@
 -define(MIN_INT, -9007199254740993). % -math:pow(2, 63)
 
 emit_null(_Rep, Env) ->
-  case transit_marshaler:as_map_key(Env) of
-    true ->
+  case transit_marshaler:context(Env) of
+    key ->
       emit_string(<<?ESC/bitstring, ?NULL/bitstring>>, <<"null">>, Env);
-    false ->
+    value ->
       emit_object(undefined, Env)
   end.
 
 emit_boolean(Rep, Env) ->
-  case transit_marshaler:as_map_key(Env) of
-    true ->
+  case transit_marshaler:context(Env) of
+    key ->
       emit_string(<<?ESC/bitstring, ?BOOLEAN/bitstring>>, Rep, Env);
-    false ->
+    value ->
       emit_object(Rep, Env)
   end.
 
 emit_int(Rep, Env) when is_integer(Rep), Rep =< ?MIN_INT; is_integer(Rep), Rep >= ?MAX_INT ->
   emit_string(<<?ESC/bitstring, ?INT/bitstring>>, integer_to_binary(Rep), Env);
 emit_int(Rep, Env) ->
-  case transit_marshaler:as_map_key(Env) of
-    true ->
+  case transit_marshaler:context(Env) of
+    key ->
       emit_string(<<?ESC/bitstring, ?INT/bitstring>>, Rep, Env);
-    false ->
+    value ->
       emit_object(Rep, Env)
   end.
 
 emit_float(Rep, Env) ->
-  case transit_marshaler:as_map_key(Env) of
-    true ->
+  case transit_marshaler:context(Env) of
+    key ->
       emit_string(<<?ESC/bitstring, ?FLOAT/bitstring>>, Rep, Env);
-    false ->
+    value ->
       emit_object(Rep, Env)
   end.
 
@@ -52,7 +52,7 @@ emit_float(Rep, Env) ->
 
 emit_tagged(#tagged_value{tag=Tag, rep=Rep}, S0) ->
   Cache = transit_marshaler:cache(S0),
-  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:as_map_key(S0)),
+  {EncodedTag, Cache1} = transit_rolling_cache:encode(Cache, <<?ESC/bitstring, "#", Tag/bitstring>>, transit_marshaler:context(S0)),
   S1 = S0#env{cache=Cache1},
   {Tag1, S2} = emit_object(EncodedTag, S1),
   {Body, S3} =  transit_marshaler:marshal(?MODULE, Rep, S2),
@@ -77,7 +77,7 @@ emit_string(Tag, String, Env) ->
     
 emit_raw_string(Raw, Env) ->
   Cache = transit_marshaler:cache(Env),
-  {Encoded, Cache1} = transit_rolling_cache:encode(Cache, Raw, transit_marshaler:as_map_key(Env)),
+  {Encoded, Cache1} = transit_rolling_cache:encode(Cache, Raw, transit_marshaler:context(Env)),
   emit_object(Encoded, Env#env{cache=Cache1}).
   
 -spec emit_object(Rep, Env) ->
@@ -94,14 +94,17 @@ emit_object_(O) ->
       false -> exit(unidentified_write)
     end.
 
+flip(value) -> key;
+flip(key) -> value.
+
 emit_map(M, S) ->
   A = [?MAP_AS_ARR|transit_marshaler:flatten_map(M)],
-  {Body, S2, _} = lists:foldl(fun (E, {In, NS, AsMapKey}) ->
-                               NS1 = transit_marshaler:force_as_map_key(AsMapKey, NS),
+  {Body, S2, _} = lists:foldl(fun (E, {In, NS, Kind}) ->
+                               NS1 = transit_marshaler:force_context(Kind, NS),
                                {NE, NS2} = transit_marshaler:marshal(?MODULE, E, NS1),
-                               {[NE|In], NS2, not AsMapKey}
+                               {[NE|In], NS2, flip(Kind)}
                            end,
-                           {[], S, false}, A),
+                           {[], S, value}, A),
   {lists:reverse(Body), S2}.
 
 emit_cmap(M, S) ->
@@ -142,7 +145,7 @@ marshals_tagged(Env) ->
            {<<"[\"~#'\",false]">>, false},
            {<<"[\"~#'\",\"~m0\"]">>, {timepoint, {0,0,0}}},
            {<<"[\"~#'\",2.5]">>, 2.5},
-           {<<"[\"~#'\",2.998e8]">>, 2.998E8},
+           {<<"[\"~#'\",2.998e8]">>, 2.998e8},
            {<<"[\"~#'\",9007199254740992]">>,9007199254740992},
            {<<"[\"~#'\",\"~i9007199254740993\"]">>,9007199254740993},
            %{<<"[\"~#'\",\"~n9223372036854775806\"]">>,9223372036854775806},

@@ -18,7 +18,7 @@ read(Obj, Config) ->
   
   case unpack(Obj, Format) of
     {ok, Rep} ->
-      {Val, _} = decode(Cache, Rep, false),
+      {Val, _} = decode(Cache, Rep, value),
       Val;
     {error, unknown_format} ->
       error(badarg)
@@ -38,39 +38,39 @@ format(#{}) -> undefined;
 format(Config) when is_list(Config) ->
     proplists:get_value(format, Config, undefined).
 
-decode(Cache, Str, AsMapKey) when is_binary(Str) ->
-  {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, Str, AsMapKey),
+decode(Cache, Str, Kind) when is_binary(Str) ->
+  {OrigStr, Cache1} = transit_rolling_cache:decode(Cache, Str, Kind),
   {parse_string(OrigStr), Cache1};
-decode(Cache, [?MAP_AS_ARR|Tail], AsMapKey) ->
-  {L, C} = decode_array_hash(Cache, Tail, AsMapKey),
+decode(Cache, [?MAP_AS_ARR|Tail], Kind) ->
+  {L, C} = decode_array_hash(Cache, Tail, Kind),
   {transit_utils:map_rep(L), C};
 %% If the output is from a verbose write, it will be encoded as a hash
-decode(Cache, [{Key, Val}], AsMapKey) ->
-  case decode(Cache, Key, true) of
+decode(Cache, [{Key, Val}], Kind) ->
+  case decode(Cache, Key, key) of
     {{tag, Tag}, C1} ->
-      {DVal, C2} = decode(C1, Val, AsMapKey),
+      {DVal, C2} = decode(C1, Val, Kind),
       {decode_tag(Tag, DVal), C2};
     {DKey, C1} ->
-      {DVal, C2} = decode(C1, Val, false),
+      {DVal, C2} = decode(C1, Val, value),
       {transit_utils:map_rep([{DKey, DVal}]), C2}
   end;
-decode(Cache, [{_, _}|_] = Obj, AsMapKey) ->
-  {L, C} = decode_hash(Cache, Obj, AsMapKey),
+decode(Cache, [{_, _}|_] = Obj, Kind) ->
+  {L, C} = decode_hash(Cache, Obj, Kind),
   {transit_utils:map_rep(L), C};
-decode(Cache, [EscapedTag, Rep] = Name, AsMapKey) when is_binary(EscapedTag) ->
-  {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, AsMapKey),
+decode(Cache, [EscapedTag, Rep] = Name, Kind) when is_binary(EscapedTag) ->
+  {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, Kind),
   case OrigTag of
     <<"~#", Tag/binary>> ->
-      {DRep, C1} = decode(C, Rep, AsMapKey),
+      {DRep, C1} = decode(C, Rep, Kind),
       {decode_tag(Tag, DRep), C1};
     _ ->
       %% Abort the above and decode as an array. Note the reference back to the original cache
-      decode_array(Cache, Name, AsMapKey)
+      decode_array(Cache, Name, Kind)
   end;
-decode(Cache, [{}], _AsMapKey) -> {#{}, Cache};
-decode(Cache, Obj, AsMapKey) when is_list(Obj) -> decode_array(Cache, Obj, AsMapKey);
-decode(Cache, null, _AsMapKey) -> {undefined, Cache};
-decode(Cache, Obj, _AsMapKey) -> {Obj, Cache}.
+decode(Cache, [{}], _Kind) -> {#{}, Cache};
+decode(Cache, Obj, Kind) when is_list(Obj) -> decode_array(Cache, Obj, Kind);
+decode(Cache, null, _Kind) -> {undefined, Cache};
+decode(Cache, Obj, _Kind) -> {Obj, Cache}.
 
 rem_fst(<<_, Data/binary>>) -> Data.
 
@@ -81,34 +81,34 @@ parse_string(<< $~, $#, Rep/binary>>) -> {tag, Rep};
 parse_string(<< $~, X:1/binary, Rep/binary>>) -> handle(X, Rep);
 parse_string(S) -> S.
 
-decode_array_hash(Cache, [Key,Val|Name], AsMapKey) ->
-  {DKey, C1} = decode(Cache, Key, true),
-  {DVal, C2} = decode(C1, Val, false),
-  {Tail, C3} = decode_array_hash(C2, Name, AsMapKey),
+decode_array_hash(Cache, [Key,Val|Name], Kind) ->
+  {DKey, C1} = decode(Cache, Key, key),
+  {DVal, C2} = decode(C1, Val, value),
+  {Tail, C3} = decode_array_hash(C2, Name, Kind),
   {[{DKey, DVal}|Tail], C3};
 decode_array_hash(Cache, [], _AsMapKey) ->
   {[], Cache}.
 
-decode_array(Cache, Obj, AsMapKey) ->
-  lists:mapfoldl(fun(El, C) -> decode(C, El, AsMapKey) end, Cache, Obj).
+decode_array(Cache, Obj, Kind) ->
+  lists:mapfoldl(fun(El, C) -> decode(C, El, Kind) end, Cache, Obj).
 
 decode_tag(Tag, Rep) -> handle(Tag, Rep).
 
-decode_hash(Cache, [{Key, Val}], AsMapKey) ->
-  case decode(Cache, Key, AsMapKey) of
+decode_hash(Cache, [{Key, Val}], Kind) ->
+  case decode(Cache, Key, Kind) of
     {#tagged_value{tag=Tag}, C1} ->
-      {DecodedVal, C2} = decode(C1, Val, AsMapKey),
+      {DecodedVal, C2} = decode(C1, Val, Kind),
       {decode_tag(Tag, DecodedVal), C2};
     {DecodedKey, C3} ->
-      {Rep, C4} = decode(C3, Val, false),
+      {Rep, C4} = decode(C3, Val, value),
       {[{DecodedKey, Rep}], C4}
   end;
-decode_hash(_Cache, [_], _AsMapKey) ->
+decode_hash(_Cache, [_], _Kind) ->
   exit(unidentified_read);
-decode_hash(Cache, Name, _AsMapKey) ->
+decode_hash(Cache, Name, _Kind) ->
   lists:mapfoldl(fun({Key, Val}, C) ->
-                      {DKey, C1} = decode(C, Key, true),
-                      {DVal, C2} = decode(C1, Val, false),
+                      {DKey, C1} = decode(C, Key, key),
+                      {DVal, C2} = decode(C1, Val, value),
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
 
@@ -170,7 +170,7 @@ unmarshal_quoted(C) ->
            {transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~m0\"]">>}
            %{transit_types:datetime({0,0,0}), <<"[\"~#'\",\"~t1970-01-01T00:00:01.000Z\"]">>},
           ],
-  [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
+  [fun() -> {Val, _} = decode(C, jsx:decode(Str), value) end || {Val, Str} <- Tests].
 
 unmarshal_extend(C) ->
   Tests = [{[[{kw, <<"c">>}, undefined]], <<"[[\"~:c\",null]]">>},
@@ -182,7 +182,7 @@ unmarshal_extend(C) ->
                              {kw, <<"b">>}}, {3, 4}]), <<"[\"^ \",\"~:a\",\"~:b\",3,4]">>},
            {sets:from_list([<<"foo">>, <<"bar">>, <<"baz">>]), <<"[\"~#set\", [\"foo\",\"bar\",\"baz\"]]">>},
            {maps:from_list([{{kw, <<"foo">>}, <<"bar">>}]), <<"{\"~:foo\":\"bar\"}">>}],
-  [fun() -> {Val, _} = decode(C, jsx:decode(Str), false) end || {Val, Str} <- Tests].
+  [fun() -> {Val, _} = decode(C, jsx:decode(Str), value) end || {Val, Str} <- Tests].
 
 parse_string_test_() ->
   ?_assertEqual(foo, parse_string(<<"~:foo">>)),

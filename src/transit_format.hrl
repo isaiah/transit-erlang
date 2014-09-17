@@ -28,7 +28,8 @@
 
 -define(TRANSIT_HANDLERS, transit_handlers).
 
--record(env, {as_map_key=false :: boolean(),
-              cache :: transit_rolling_cache:cache(),
-              custom_handler :: module()
-             }).
+-record(env, {
+	context = value :: key | value,
+	cache :: transit_rolling_cache:cache(),
+	custom_handler :: module()
+	}).
