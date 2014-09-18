@@ -336,13 +336,13 @@ exemplar(Name, Val, Config) ->
                 File = filename:join(Dir, Name ++ Ext),
                 {ok, Data} = file:read_file(File),
                 % Test read
-                Val1 = transit:read(Data, [{format, Format}]),
+                Val1 = transit:read(Data, #{ format => Format }),
                 if Val1 =/= Val ->
                      compare(Val, Val1);
                    true ->
                      %% Test reencode
-                     S = transit:write(Val, [{format,Format}]),
-                     Val = transit:read(S, [{format,Format}])
+                     S = transit:write(Val, #{ format => Format }),
+                     Val = transit:read(S, #{ format => Format })
                 end
             end, [{json, ".json"}, {json_verbose, ".verbose.json"}, {msgpack, ".mp"}]).
 

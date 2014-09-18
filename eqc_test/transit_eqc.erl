@@ -172,8 +172,9 @@ term_type(Ty) ->
   end.
 
 iso(F, T) ->
-    Data = transit:write(T, [{format, F}]),
-    T2 = transit:read(Data, [{format, F}]),
+    Opts = #{ format => F },
+    Data = transit:write(T, Opts),
+    T2 = transit:read(Data, Opts),
     collect(with_title(log_10_size), trunc(math:log10(term_size(T))),
       aggregate(with_title(term_type), term_type(T),
         equals(T, T2))).

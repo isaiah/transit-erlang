@@ -9,4 +9,4 @@ continuous_write(_Config) ->
   Tests = [{<<"[\"~#'\",1]">>, 1},
            {<<"[\"~#'\",1]">>, 1}
           ],
-  [Rep = transit:write(Val, [{format, json}, {handler, ?MODULE}]) || {Rep, Val} <- Tests].
+  [Rep = transit:write(Val, #{ format => json, handler => ?MODULE }) || {Rep, Val} <- Tests].

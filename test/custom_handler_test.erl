@@ -7,7 +7,7 @@
 
 custom_handler_test() ->
   P = #point{x=1.5, y=2.5},
-  ?assertEqual(<<"[\"~#point\",[1.5,2.5]]">>, transit_writer:write(P, [{format,json},{handler, ?MODULE}])).
+  ?assertEqual(<<"[\"~#point\",[1.5,2.5]]">>, transit_writer:write(P, #{ format => json, handler => ?MODULE })).
 
 %%% custom handler callback
 handler(#point{}) ->

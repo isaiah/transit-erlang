@@ -65,6 +65,17 @@ We currently handle the types in the given table with the given mappings.
 
 We chose to handle a "naked" `binary()` as an UTF-8 string.
 
+### Mapping override
+
+In order to handle data in a neat Erlang-esque way, it is possible to supply a translation table in the decoder direction. This table is used to handle scalar types and map them into other data. The intended use is to support `binary() → atom()` conversion for keywords and symbols. But it also useful for direct decoding of other types.
+
+```erlang
+9> transit:write({kw, <<"foo">>}).                                                                        
+<<"[\"~#'\",\"~:foo\"]">>
+10> transit:read(v(9), #{ format => json, translate_table => fun ({kw, <<"foo">>}) -> foo; (X) -> X end }).
+foo
+```
+
 We are currently not able to support:
 
 * Link types
