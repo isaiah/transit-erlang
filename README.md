@@ -44,10 +44,13 @@ encoder time for each round. This then forms the base benchmark.
 | ------ | ---- | ------ |
 | 3d3b04e | JSON | #{iso => 31.987, read => 9.976, write => 20.810} |
 | c976ce6 | JSON | #{iso => 29.248, read => 8.883, write => 18.700} |
+| 9d678c8 | JSON | #{iso => 26.6893,read => 7.454,write => 18.178} |
 | 3d3b04e | MsgPack | #{iso => 15.911, read => 4.901, write => 12.072} |
 | c976ce6 | MsgPack | #{iso => 11.713, read => 3.258, write => 9.051} |
+| 9d678c8 | MsgPack | #{iso => 11.2637, read => 2.8620, write => 9.0897} |
 | 3d3b04e | JSON_Verbose | #{iso => 34.236, read => 9.724, write => 25.638} |
 | c976ce6 | JSON_Verbose | #{iso => 36.613, read => 9.572, write => 27.120} |
+| 9d678c8 | JSON_Verbose | #{iso => 33.36954,  read => 8.59574, write => 29.23906} |
 
 Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes in 0.930 ms. These are therefore the minimum timings and the rest is transit-specific overhead of decoding.
 

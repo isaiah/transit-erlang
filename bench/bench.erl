@@ -11,15 +11,16 @@ run(Format) ->
 	run(Format, ?DATA).
 	
 run(Format, File) ->
+	Opts = #{ format => Format },
 	{ok, Data} = file:read_file(File),
 	WData = transit:read(Data),
-	RData = transit:write(WData, [{format, Format}]),
+	RData = transit:write(WData, Opts),
 	io:format("Read~n"),
-	{ReadTiming, ok} = timer:tc(fun() -> run_read(?ROUNDS, RData, [{format, Format}]) end),
+	{ReadTiming, ok} = timer:tc(fun() -> run_read(?ROUNDS, RData, Opts) end),
 	io:format("Write~n"),
-	{WriteTiming, ok} = timer:tc(fun() -> run_write(?ROUNDS, WData, [{format, Format}]) end),
+	{WriteTiming, ok} = timer:tc(fun() -> run_write(?ROUNDS, WData, Opts) end),
 	io:format("ISO~n"),
-	{IsoTiming, ok} = timer:tc(fun() -> run_iso(?ROUNDS, RData, [{format, Format}]) end),
+	{IsoTiming, ok} = timer:tc(fun() -> run_iso(?ROUNDS, RData, Opts) end),
 	#{
 	  read => (ReadTiming / 1000) / ?ROUNDS,
 	  write => (WriteTiming / 1000) / ?ROUNDS,
