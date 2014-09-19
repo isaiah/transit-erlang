@@ -112,7 +112,7 @@ decode_hash(Cache, Name, _Kind, Config) ->
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
 
-handle(Ty, Rep, #{ translate_table := TR }) ->
+handle(Ty, Rep, #{ translate_fun := TR }) ->
     TR(handle(Ty, Rep));
 handle(Ty, Rep, _) -> handle(Ty, Rep).
 

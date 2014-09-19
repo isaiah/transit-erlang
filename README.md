@@ -77,7 +77,7 @@ In order to handle data in a neat Erlang-esque way, it is possible to supply a t
 ```erlang
 9> transit:write({kw, <<"foo">>}).                                                                        
 <<"[\"~#'\",\"~:foo\"]">>
-10> transit:read(v(9), #{ format => json, translate_table => fun ({kw, <<"foo">>}) -> foo; (X) -> X end }).
+10> transit:read(v(9), #{ format => json, translate_fun => fun ({kw, <<"foo">>}) -> foo; (X) -> X end }).
 foo
 ```
 
