@@ -93,8 +93,8 @@ We are currently not able to support:
 | integer      | integer()                 | integer()                 |
 | decimal      | float()                   | float()                   |
 | big integer  | integer()                 | integer()                 |
-| time         | {timepoint, now()}        | {timepoint, now()         |
-| keyword      | {kw, binary()}            | {kw, binary()}
+| time         | {timepoint, now()}; now()     | {timepoint, now()         |
+| keyword      | {kw, binary()}; atom()         | {kw, binary()}
 | symbol       | {sym, binary()}        | {sym, binary()}        |
 | uri          | {uri, binary()}           | {uri, binary()}        |
 | uuid         | {uuid, binary()}                 | {uuid, binary()}                  |

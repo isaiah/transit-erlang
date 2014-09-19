@@ -6,7 +6,7 @@
 %% Generate a valid atom in Erlang land (we can't handle utf8 yet here before R18
 
 simple_atom() ->
-    elements([a, ab, abc, abcd, abcde, abcdef, abcdefg, abcdefghij, 'abcdef123__^~:']).
+    elements(['', a, ab, abc, abcd, abcde, abcdef, abcdefg, abcdefghij, 'abcdef123__^~:']).
     
 advanced_atom() ->
 	oneof([
@@ -36,7 +36,9 @@ time_point_ms() ->
 null() -> return(undefined).
 
 keyword() ->
-  ?LET(S, eqc_lib:utf8_string(), {kw, S}).
+  oneof(
+  	[%atom(),
+  	 ?LET(S, eqc_lib:utf8_string(), {kw, S})]).
 
 symbol() ->
     ?LET(S, eqc_lib:utf8_string(), {sym, S}).
@@ -137,14 +139,38 @@ term_size(X) ->
       1
   end.
 
-term_type(null) -> [null];
+canonicalize(M) when is_map(M) ->
+    L = maps:to_list(M),
+    maps:from_list([{canonicalize(K), canonicalize(V)} || {K, V} <- L]);
+canonicalize(L) when is_list(L) ->
+    [canonicalize(E) || E <- L];
+canonicalize({list, L}) -> {list, canonicalize(L)};
+canonicalize({X, Y, Z}) -> {timepoint, {X, Y, Z}};
+canonicalize(undefined) -> undefined;
+canonicalize(true) -> true;
+canonicalize(false) -> false;
+canonicalize(nan) -> nan;
+canonicalize(infinity) -> infinity;
+canonicalize(neg_infinity) -> neg_infinity;
+
+canonicalize(A) when is_atom(A) -> {kw, atom_to_binary(A, utf8)};
+canonicalize(X) ->
+  case sets:is_set(X) of
+    true ->
+      L = sets:to_list(X),
+      sets:from_list([canonicalize(E) || E <- L]);
+    false ->
+      X
+  end.
+
+term_type(undefined) -> [null];
 term_type(true) -> [bool];
 term_type(false) -> [bool];
 term_type(nan) -> [special_number];
 term_type(infinity) -> [special_number];
 term_type(neg_infinity) -> [special_number];
 term_type(B) when is_binary(B) -> [string];
-term_type(A) when is_atom(A) -> [keyword];
+term_type(A) when is_atom(A) -> [keyword_atom];
 term_type(I) when is_integer(I) -> [int];
 term_type(F) when is_float(F) -> [float];
 term_type(L) when is_list(L) ->
@@ -156,19 +182,21 @@ term_type(M) when is_map(M) ->
   lists:usort([map] ++ Keys ++ Values);
 term_type({uuid, _}) -> [uuid];
 term_type({sym, _}) -> [symbol];
+term_type({kw, _}) -> [keyword_binary];
 term_type({uri, _}) -> [uri];
 term_type({binary, _}) -> [binary];
 term_type({list, L}) ->
   Underlying = lists:flatten([term_type(K) || K <- L]),
   lists:usort([list | Underlying]);
-term_type({timepoint,_}) -> [time];
+term_type({timepoint,_}) -> [time_wrap];
+term_type({_M, _S, _Us}) -> [time_tuple];
 term_type(Ty) ->
   case sets:is_set(Ty) of
     true ->
       Elems = lists:flatten([term_type(E) || E <- sets:to_list(Ty)]),
       lists:usort([set | Elems]);
     false ->
-      [unknown]
+      exit({unknown, Ty})
   end.
 
 iso(F, T) ->

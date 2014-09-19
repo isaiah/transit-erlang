@@ -68,12 +68,12 @@ pw(Format, File) ->
 	
 run_pw(0, _, _) -> ok;
 run_pw(N, Data, Format) ->
-	transit:write(Data, [{format, Format}]),
+	transit:write(Data, #{ format => Format }),
 	run_pw(N-1, Data, Format).
 
 run_p(0, _, _) -> ok;
 run_p(N, Data, Format) ->
-	transit:read(Data, [{format, Format}]),
+	transit:read(Data, #{ format => Format }),
 	run_p(N-1, Data, Format).
 
 jsx() ->

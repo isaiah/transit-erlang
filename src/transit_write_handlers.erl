@@ -9,70 +9,40 @@
 -define(UUID_MASK, math:pow(2, 64) - 1).
 
 %%% undefined handler
-undefined_tag(_) ->
-  ?NULL.
-
-undefined_rep(_) ->
-  undefined.
-
-undefined_string_rep(_) ->
-  <<"null">>.
+undefined_tag(_) -> ?NULL.
+undefined_rep(_) -> undefined.
+undefined_string_rep(_) -> <<"null">>.
 
 %%% Integer handler
-integer_tag(_I) ->
-  ?INT.
-
-integer_rep(I) ->
-  I.
-
-integer_string_rep(I) ->
-  list_to_binary(integer_to_list(I)).
+integer_tag(_I) -> ?INT.
+integer_rep(I) -> I.
+integer_string_rep(I) -> list_to_binary(integer_to_list(I)).
 
 %%% Float handler
-float_tag(_) ->
-  ?FLOAT.
-float_rep(F) ->
-  F.
-float_string_rep(F) ->
-  transit_utils:double_to_binary(F).
+float_tag(_) -> ?FLOAT.
+float_rep(F) -> F.
+float_string_rep(F) -> transit_utils:double_to_binary(F).
 
 %%% binary handler
-binary_tag(_) ->
-  ?STRING.
-binary_rep(S) ->
-  S.
-binary_string_rep(S) ->
-  S.
-
+binary_tag(_) -> ?STRING.
+binary_rep(S) -> S.
+binary_string_rep(S) -> S.
 
 %%% Boolean handler
-boolean_tag(_) ->
-  ?BOOLEAN.
-boolean_rep(B) ->
-  B.
-boolean_string_rep(B) ->
-  case B of
-    true ->
-      <<"t">>;
-    false ->
-      <<"f">>
-  end.
+boolean_tag(_) -> ?BOOLEAN.
+boolean_rep(B) -> B.
+boolean_string_rep(true) -> <<"t">>;
+boolean_string_rep(false) -> <<"f">>.
 
 %%% Array (which is list in erlang) handler
-array_tag(_A) ->
-  ?ARRAY.
-array_rep(A) ->
-  A.
-array_string_rep(_A) ->
-  undefined.
+array_tag(_A) -> ?ARRAY.
+array_rep(A) -> A.
+array_string_rep(_A) -> undefined.
 
 %%% Map handler
-map_tag(_M) ->
-  ?MAP.
-map_rep(M) ->
-  M.
-map_string_rep(_M) ->
-  undefined.
+map_tag(_M) -> ?MAP.
+map_rep(M) -> M.
+map_string_rep(_M) -> undefined.
 
 const(K) -> fun (_) -> K end.
 
@@ -150,6 +120,21 @@ handler(#tagged_value{}) ->
   	tag = fun(#tagged_value { tag = Tag }) -> Tag end,
   	rep = fun(#tagged_value { rep = Rep}) -> Rep end,
   	string_rep = fun(#tagged_value { rep = Rep}) -> Rep end
+  };
+handler(Atom) when is_atom(Atom) ->
+  #write_handler {
+    tag = fun(_) -> ?KEYWORD end,
+    rep = fun(A) -> A end,
+    string_rep = fun(A) -> atom_to_binary(A, utf8) end
+  };
+handler({Mega, Secs, Micros})
+  when is_integer(Mega),
+       is_integer(Secs) andalso Secs >= 0 andalso Secs < 1000000,
+       is_integer(Micros) andalso Micros >= 0 andalso Micros < 1000000 ->
+  #write_handler {
+    tag = fun (_) -> ?DATE end,
+    rep = fun (TP) -> transit_utils:timestamp_to_ms(TP) end,
+    string_rep = fun (TP) -> integer_to_binary(transit_utils:timestamp_to_ms(TP)) end
   };
 handler(Data) ->
   case transit_utils:is_set(Data) of
