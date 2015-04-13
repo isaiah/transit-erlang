@@ -43,11 +43,8 @@ keyword() ->
 symbol() ->
     ?LET(S, eqc_lib:utf8_string(), {sym, S}).
 
-large_integer() -> choose(9007199254740992, 9007199254740992*9007199254740992).
-
 integer() ->
-  ?SUCHTHAT(I, oneof([int(), eqc_lib:interesting_int(), largeint()]),
-    I /= -576460752303423488).
+  oneof([int(), eqc_lib:interesting_int(), largeint()]).
 
 set(G) ->
     ?LET(L, list(G),
