@@ -73,13 +73,8 @@ uuid_to_string([HI, LO]) ->
                   "~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
                   [U0, U1, U2, U3, U4])).
 
--ifdef(maps_support).
 map_rep(PropList) ->
   maps:from_list(PropList).
--else.
-map_rep(Ret) ->
-  Ret.
--endif.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
