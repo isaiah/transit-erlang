@@ -5,7 +5,7 @@
 -export([jsx/0, msgpack/0]).
 
 -define(ROUNDS, 300).
--define(DATA, "../../transit-format/examples/0.8/example.json").
+-define(DATA, "../transit-format/examples/0.8/example.json").
 
 run(Format) ->
 	run(Format, ?DATA).
@@ -89,7 +89,7 @@ jsx(N, Data) ->
 msgpack() ->
 	{ok, Data} = file:read_file(?DATA),
 	R = transit:read(Data),
-	W = transit:write(R, [{format, msgpack}]),
+	W = transit:write(R, #{ format => msgpack }),
 	{Timing, _} = timer:tc(fun() -> msgpack(?ROUNDS, W) end),
 	Timing / ?ROUNDS.
 
