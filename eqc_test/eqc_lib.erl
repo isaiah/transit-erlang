@@ -10,8 +10,8 @@ pow(_Base, 0) -> 1;
 pow(Base, N) -> Base * pow(Base, N-1).
   
 interesting_int() ->
-    ?LET({Sign, PSign, Exponent, Perturb}, {sign(), sign(), choose(0, 128), nat()},
-        Sign * pow(2, Exponent) + PSign * Perturb).
+    ?LET({Sign, Exponent, Perturb}, {sign(), choose(0, 128), choose(-3, 3)},
+        Sign * pow(2, Exponent) + Perturb).
 
 hex_char() ->
     elements([$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $0, $a, $b, $c, $d, $e, $f]).
