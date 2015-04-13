@@ -1,6 +1,6 @@
 -module(transit_reader).
 -include("transit_format.hrl").
--include_lib("transit.hrl").
+-include("transit.hrl").
 
 %% ------------------------------------------------------------------
 %% API Function Exports
