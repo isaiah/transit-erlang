@@ -196,33 +196,27 @@ term_type(Ty) ->
       exit({unknown, Ty})
   end.
 
-iso(F, T) ->
+iso(F, Term) ->
     Opts = #{ format => F },
-    Data = transit:write(T, Opts),
-    T2 = transit:read(Data, Opts),
-    collect(with_title(log_10_size), trunc(math:log10(term_size(T))),
-      aggregate(with_title(term_type), term_type(T),
-        equals(T, T2))).
+    Data = transit:write(Term, Opts),
+    ReRead = transit:read(Data, Opts),
+    measure(size, term_size(Term),
+      aggregate(with_title(term_type), term_type(Term),
+        equals(Term, ReRead))).
 
 prop_iso_json() -> ?FORALL(T, term(), iso(json, T)).
 prop_iso_json_verbose() -> ?FORALL(T, term(), iso(json_verbose, T)).
 prop_iso_msgpack() -> ?FORALL(T, term(), iso(msgpack, T)).
 
+%% Disabled properties for simpler types.
 xprop_integer() -> ?FORALL(I, integer(), iso(json, I)).
 xprop_uuid() -> ?FORALL(UUID, transit_uuid(), iso(json, UUID)).
 xprop_string() -> ?FORALL(S, eqc_lib:utf8_string(), iso(json, S)).
 xprop_keyword() -> ?FORALL(KW, keyword(), iso(json, KW)).
 xprop_symbol() -> ?FORALL(S, symbol(), iso(json, S)).
-
-xprop_timestamp_json() ->
-  ?FORALL(TS, transit_time(),
-    iso(json, TS)).
-xprop_timestamp_json_verbose() ->
-  ?FORALL(TS, transit_time(),
-    iso(json_verbose, TS)).
-xprop_timestamp_msgpack() ->
-  ?FORALL(TS, transit_time(),
-    iso(msgpack, TS)).
+xprop_timestamp_json() -> ?FORALL(TS, transit_time(), iso(json, TS)).
+xprop_timestamp_json_verbose() -> ?FORALL(TS, transit_time(), iso(json_verbose, TS)).
+xprop_timestamp_msgpack() -> ?FORALL(TS, transit_time(), iso(msgpack, TS)).
 
 ms({Mega, Secs, Micro}) -> {Mega, Secs, (Micro div 1000) * 1000}.
 
@@ -233,17 +227,3 @@ xprop_time() ->
           Decoded = transit_utils:ms_to_timestamp(Coded),
           ms(Decoded) =:= ms(TP)
       end).
-
-%% Running tests
-%%
-
-t(Format, {T, Unit}) ->
-    eqc:testing_time(eval_time(T, Unit), ?FORALL(X, term(), iso(Format, X))).
-
-eval_time(N, h) -> eval_time(N*60, min);
-eval_time(N, min) -> eval_time(N*60, sec);
-eval_time(N, sec) -> N.
-
-r(What, T) ->
-    eqc:quickcheck(t(What, T)).
-
