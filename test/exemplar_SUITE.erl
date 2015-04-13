@@ -60,6 +60,7 @@
          vector_nested_exemplar/1,
          vector_simple_exemplar/1,
          vector_unrecognized_vals_exemplar/1,
+         vector_special_numbers/1,
          zero_exemplar/1
 
         ]).
@@ -127,6 +128,7 @@ groups() -> [
                vector_empty_exemplar,
                vector_mixed_exemplar,
                vector_nested_exemplar,
+               vector_special_numbers,
                small_strings_exemplar,
                strings_tilde_exemplar,
                strings_hash_exemplar,
@@ -278,6 +280,8 @@ vector_1936_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1936_keywords_repeated_twice", array_of_keywords(1935, 1935*2), Conf).
 vector_1937_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1937_keywords_repeated_twice", array_of_keywords(1936, 1936*2), Conf).
+vector_special_numbers(Conf) ->
+  exemplar("vector_special_numbers", [nan, infinity, neg_infinity], Conf).
 
 map_10_items_exemplar(Conf) ->
   exemplar("map_10_items", hash_of_size(10), Conf).

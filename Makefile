@@ -8,7 +8,8 @@ compile:
 
 .PHONY: test
 test: compile
-	$(REBAR) eunit ct
+	$(REBAR) eunit
+	$(REBAR) ct
 
 # EQC
 eqc-ci: compile
