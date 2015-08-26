@@ -10,3 +10,4 @@ logs/
 current_counterexample.eqc
 *.swp
 .eqc-info
+_build

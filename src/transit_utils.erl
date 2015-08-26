@@ -5,7 +5,6 @@
 -export([ms_to_timestamp/1]).
 -export([timestamp_to_ms/1]).
 -export([double_to_binary/1]).
--export([map_rep/1]).
 -export([uuid_to_string/1]).
 
 is_set(Data) ->
@@ -72,14 +71,6 @@ uuid_to_string([HI, LO]) ->
   lists:flatten(io_lib:format(
                   "~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",
                   [U0, U1, U2, U3, U4])).
-
--ifdef(maps_support).
-map_rep(PropList) ->
-  maps:from_list(PropList).
--else.
-map_rep(Ret) ->
-  Ret.
--endif.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

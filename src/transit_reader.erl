@@ -1,6 +1,6 @@
 -module(transit_reader).
 -include("transit_format.hrl").
--include_lib("transit.hrl").
+-include("transit.hrl").
 
 %% ------------------------------------------------------------------
 %% API Function Exports
@@ -43,7 +43,7 @@ decode(Cache, Str, Kind, Config) when is_binary(Str) ->
   {parse_string(OrigStr, Config), Cache1};
 decode(Cache, [?MAP_AS_ARR|Tail], Kind, Config) ->
   {L, C} = decode_array_hash(Cache, Tail, Kind, Config),
-  {transit_utils:map_rep(L), C};
+  {maps:from_list(L), C};
 %% If the output is from a verbose write, it will be encoded as a hash
 decode(Cache, [{Key, Val}], Kind, Config) ->
   case decode(Cache, Key, key, Config) of
@@ -52,11 +52,11 @@ decode(Cache, [{Key, Val}], Kind, Config) ->
       {decode_tag(Tag, DVal, Config), C2};
     {DKey, C1} ->
       {DVal, C2} = decode(C1, Val, value, Config),
-      {transit_utils:map_rep([{DKey, DVal}]), C2}
+      {maps:from_list([{DKey, DVal}]), C2}
   end;
 decode(Cache, [{_, _}|_] = Obj, Kind, Config) ->
   {L, C} = decode_hash(Cache, Obj, Kind, Config),
-  {transit_utils:map_rep(L), C};
+  {maps:from_list(L), C};
 decode(Cache, [EscapedTag, Rep] = Name, Kind, Config) when is_binary(EscapedTag) ->
   {OrigTag, C} = transit_rolling_cache:decode(Cache, EscapedTag, Kind),
   case OrigTag of
@@ -112,11 +112,14 @@ decode_hash(Cache, Name, _Kind, Config) ->
                       {{DKey, DVal}, C2}
                  end, Cache, Name).
 
+collect_pairs([]) -> [];
+collect_pairs([K,V | Tail]) -> [{K, V} | collect_pairs(Tail)].
+
 handle(Ty, Rep, #{ translate_fun := TR }) ->
     TR(handle(Ty, Rep));
 handle(Ty, Rep, _) -> handle(Ty, Rep).
 
-handle(?CMAP, Rep) -> transit_utils:map_rep(list_to_proplist(Rep));
+handle(?CMAP, Rep) -> maps:from_list(collect_pairs(Rep));
 handle(?NULL, _) -> undefined;
 handle(?BOOLEAN, <<"t">>) -> true;
 handle(?BOOLEAN, <<"f">>) -> false;
@@ -141,10 +144,6 @@ handle(?UUID, Rep) -> {uuid, Rep};
 handle(?URI, Rep) -> {uri, Rep};
 handle(Extension, Rep) ->
   transit_types:tv(Extension, Rep).
-
-list_to_proplist([]) -> [];
-list_to_proplist([K,V|Tail]) -> [{K,V}|list_to_proplist(Tail)].
-
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

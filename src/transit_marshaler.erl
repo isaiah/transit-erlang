@@ -1,6 +1,6 @@
 -module(transit_marshaler).
 -include("transit_format.hrl").
--include_lib("transit.hrl").
+-include("transit.hrl").
 
 -export([flatten_map/1, quote_string/1, escape/1, context/1, force_context/2]).
 -export([marshal_top/3, marshal/3, new_env/0, new_env/1, cache/1]).

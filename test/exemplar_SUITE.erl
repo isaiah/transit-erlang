@@ -31,7 +31,7 @@
          maps_unrecognized_keys_exemplar/1,
          map_unrecognized_vals_exemplar/1,
          map_vector_keys_exemplar/1,
-	nil_exemplar/1,
+         nil_exemplar/1,
          one_date_exemplar/1,
          one_exemplar/1,
          one_keyword_exemplar/1,
@@ -60,6 +60,7 @@
          vector_nested_exemplar/1,
          vector_simple_exemplar/1,
          vector_unrecognized_vals_exemplar/1,
+         vector_special_numbers/1,
          zero_exemplar/1
 
         ]).
@@ -127,6 +128,7 @@ groups() -> [
                vector_empty_exemplar,
                vector_mixed_exemplar,
                vector_nested_exemplar,
+               vector_special_numbers,
                small_strings_exemplar,
                strings_tilde_exemplar,
                strings_hash_exemplar,
@@ -278,6 +280,8 @@ vector_1936_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1936_keywords_repeated_twice", array_of_keywords(1935, 1935*2), Conf).
 vector_1937_keywords_repeated_twice_exemplar(Conf) ->
   exemplar("vector_1937_keywords_repeated_twice", array_of_keywords(1936, 1936*2), Conf).
+vector_special_numbers(Conf) ->
+  exemplar("vector_special_numbers", [nan, infinity, neg_infinity], Conf).
 
 map_10_items_exemplar(Conf) ->
   exemplar("map_10_items", hash_of_size(10), Conf).
@@ -325,26 +329,29 @@ map_nested_exemplars(Conf) ->
                              Conf)
                 end, [10, 1935, 1936, 1937]).
 
-compare([],[]) -> ok;
-compare([H|T1], [H|T2]) -> compare(T1, T2);
-compare([X|_], [Y|_]) ->
-  ct:fail({element_diff, X, Y}).
+equals(X, X) -> true;
+equals(X, Y) -> {X, '/=', Y}.
 
 exemplar(Name, Val, Config) ->
-  Dir = ?config(data_dir, Config),
-  lists:map(fun({Format, Ext}) ->
-                File = filename:join(Dir, Name ++ Ext),
-                {ok, Data} = file:read_file(File),
-                % Test read
-                Val1 = transit:read(Data, #{ format => Format }),
-                if Val1 =/= Val ->
-                     compare(Val, Val1);
-                   true ->
-                     %% Test reencode
-                     S = transit:write(Val, #{ format => Format }),
-                     Val = transit:read(S, #{ format => Format })
-                end
-            end, [{json, ".json"}, {json_verbose, ".verbose.json"}, {msgpack, ".mp"}]).
+    Dir = ?config(data_dir, Config),
+    exemplar(Name, Val, Dir, {json, ".json"}),
+    exemplar(Name, Val, Dir, {json_verbose, ".verbose.json"}),
+    exemplar(Name, Val, Dir, {msgpack, ".mp"}),
+    ok.
+
+exemplar(Name, Expected, Dir, {Format, Ext}) ->
+    FileName = filename:join(Dir, Name ++ Ext),
+    {ok, Data} = file:read_file(FileName),
+    %% Test reading
+    Val = transit:read(Data, #{ format => Format }),
+    case equals(Val, Expected) of
+        true ->
+            %% Test reencode
+            S = transit:write(Val, #{ format => Format }),
+            equals(Val, transit:read(S, #{ format => Format }));
+        Fail ->
+            ct:fail(Fail)
+    end.
 
 %%% generate atoms, aka keyword
 -spec array_of_atoms(M,N) ->

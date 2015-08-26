@@ -1,19 +1,18 @@
 .DEFAULT_GOAL := test
 
-.PHONY: deps
-deps:
-	rebar get-deps
+REBAR=rebar3
 
 .PHONY: compile
 compile:
-	rebar compile
+	$(REBAR) compile
 
 .PHONY: test
 test: compile
-	rebar get_deps=false eunit ct
+	$(REBAR) eunit
+	$(REBAR) ct
 
 # EQC
-eqc-ci: deps compile
+eqc-ci: compile
 	erlc -o ebin eqc_test/*.erl
 
 # Deps directory.
@@ -47,4 +46,4 @@ dialyze:
 default: test
 
 clean:
-	rebar clean
+	$(REBAR) clean

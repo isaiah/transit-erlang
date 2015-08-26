@@ -42,19 +42,24 @@ These benchmarks are run on a Lenovo Thinkpad W540 with a 16 Gigabyte RAM config
 Timings run 300 rounds of encoding of the file `transit-format/examples/0.8/example.json` and then we divide down to get the
 encoder time for each round. This then forms the base benchmark.
 
-| Commit | Test |  Timing ms |
-| ------ | ---- | ------ |
-| 3d3b04e | JSON | #{iso => 31.987, read => 9.976, write => 20.810} |
-| c976ce6 | JSON | #{iso => 29.248, read => 8.883, write => 18.700} |
-| 9d678c8 | JSON | #{iso => 26.6893,read => 7.454,write => 18.178} |
-| 3d3b04e | MsgPack | #{iso => 15.911, read => 4.901, write => 12.072} |
-| c976ce6 | MsgPack | #{iso => 11.713, read => 3.258, write => 9.051} |
-| 9d678c8 | MsgPack | #{iso => 11.2637, read => 2.8620, write => 9.0897} |
-| 3d3b04e | JSON_Verbose | #{iso => 34.236, read => 9.724, write => 25.638} |
-| c976ce6 | JSON_Verbose | #{iso => 36.613, read => 9.572, write => 27.120} |
-| 9d678c8 | JSON_Verbose | #{iso => 33.36954,  read => 8.59574, write => 29.23906} |
+| Erl | Commit | Renderer Vsn | Test |  Timing ms |
+| --- | ------------| ------ | ---- | ------ |
+| 17.3 | 3d3b04e | | JSON | #{iso => 31.987, read => 9.976, write => 20.810} |
+| 17.3 | c976ce6 | | JSON | #{iso => 29.248, read => 8.883, write => 18.700} |
+| 17.3 | 9d678c8 | | JSON | #{iso => 26.6893,read => 7.454,write => 18.178} |
+| 17.5 | 6dfbb23 | 327f0d2 | JSON | #{iso => 18.381, read => 5.240,write => 13.407}
+| 18.0-rc1 | 6dfbb23 | 327f0d2 | JSON | #{iso => 18.172, read => 5.304,write => 12.824}
+| 17.3 | 3d3b04e | | MsgPack | #{iso => 15.911, read => 4.901, write => 12.072} |
+| 17.3 | c976ce6 | | MsgPack | #{iso => 11.713, read => 3.258, write => 9.051} |
+| 17.3 | 9d678c8 | | MsgPack | #{iso => 11.2637, read => 2.8620, write => 9.0897} |
+| 18.0-rc1 | 6dfbb23 | 327f0d2 | MsgPack | #{iso => 11.910, read => 2.800, write => 8.822}
+| 17.5 | 6dfbb23 | c666a5f | MsgPack | #{iso => 11.818, read => 2.801, write => 9.000}
+| 17.3 | 3d3b04e | | JSON_Verbose | #{iso => 34.236, read => 9.724, write => 25.638} |
+| 17.3 | c976ce6 | | JSON_Verbose | #{iso => 36.613, read => 9.572, write => 27.120} |
+| 17.3 | 9d678c8 | | JSON_Verbose | #{iso => 33.36954,  read => 8.59574, write => 29.23906} |
+| 17.5 | 6dfbb23 | 327f0d2 | JSON_Verbose | #{iso => 19.714, read => 5.250, write => 13.440}
 
-Some important timings are that `jsx` decodes in 5.630 ms and `msgpack` decodes in 0.930 ms. These are therefore the minimum timings and the rest is transit-specific overhead of decoding.
+The JSX library can decode at different speeds depending on the version. An older version of JSX decoded in 5.630ms but a newer version is able to decode the same data in 3.504ms. MsgPack decodes at roughly 0.9ms for the same data. These provide some minimum bounds in decoder speed.
 
 Current limitations
 --------------------
