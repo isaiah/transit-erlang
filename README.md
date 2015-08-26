@@ -5,7 +5,7 @@ transit-erlang
 ==============
 [transit-format](https://github.com/cognitect/transit-format) implementation in Erlang.
 
-Test and developed on Erlang/OTP R17.
+Test and developed on Erlang/OTP R17+.
 
 *NOTE:* Things are still experimental and subject to change.
 
